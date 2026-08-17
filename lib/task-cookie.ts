@@ -2,7 +2,15 @@ import crypto from "node:crypto";
 import { cookies } from "next/headers";
 
 export type TaskKind = "clothes" | "look" | "makeup" | "hair";
-type TaskMapping = { providerTaskId: string; lookId: string; createdAt: number; kind?: TaskKind };
+export type HairPhase = "hair" | "clothes" | "makeup";
+export type TaskMapping = {
+  providerTaskId: string;
+  lookId: string;
+  createdAt: number;
+  kind?: TaskKind;
+  phase?: HairPhase;
+  makeupTemplateId?: string;
+};
 type CookiePayload = { expiresAt: number; tasks: Record<string, TaskMapping> };
 
 const COOKIE_NAME = "wearweather_tasks";

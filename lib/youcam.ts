@@ -218,22 +218,34 @@ export async function listHairTemplates(): Promise<HairTemplate[]> {
   return templates;
 }
 
-export async function createHairTask(input: { srcFileUrl?: string; sourceFile?: File; templateId: string }) {
+export function hairTaskPayload(input: { srcFileId?: string; srcFileUrl?: string; templateId: string; keepUserColor?: boolean }) {
+  const source = input.srcFileId ? { src_file_id: input.srcFileId } : { src_file_url: input.srcFileUrl };
+  return {
+    ...source,
+    template_id: input.templateId,
+    ...(input.keepUserColor ? { hair_color: "src" as const } : {}),
+  };
+}
+
+export async function createHairTask(input: { srcFileUrl?: string; sourceFile?: File; templateId: string; keepUserColor?: boolean }) {
   let srcFileId: string | undefined;
   if (!input.srcFileUrl && input.sourceFile) {
     try {
-      srcFileId = await uploadSource(input.sourceFile, `${baseUrl()}/s2s/v2.0/file/hair-transfer`);
+      srcFileId = await uploadSource(input.sourceFile, `${baseUrl()}/s2s/v2.1/file/hair-transfer`);
     } catch {
       try {
-        srcFileId = await uploadSource(input.sourceFile, `${baseUrl()}/s2s/v2.1/file/hair-transfer`);
+        srcFileId = await uploadSource(input.sourceFile, `${baseUrl()}/s2s/v2.0/file/hair-transfer`);
       } catch {
         srcFileId = await uploadSource(input.sourceFile, `${baseUrl()}/s2s/v2.0/file`);
       }
     }
   }
-  const payload = srcFileId
-    ? { src_file_id: srcFileId, template_id: input.templateId, hair_color: "src" }
-    : { src_file_url: input.srcFileUrl, template_id: input.templateId, hair_color: "src" };
+  const payload = hairTaskPayload({
+    srcFileId,
+    srcFileUrl: input.srcFileUrl,
+    templateId: input.templateId,
+    keepUserColor: input.keepUserColor,
+  });
   const body = await providerJson(`${baseUrl()}/s2s/v2.1/task/hair-transfer`, { method: "POST", body: JSON.stringify(payload) });
   const providerTaskId = body?.data?.task_id;
   if (!providerTaskId) throw new Error("YOUCAM_TASK_RESPONSE_INVALID");

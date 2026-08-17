@@ -346,7 +346,7 @@ export default function Home() {
 
   const startHair = async (plan = hairPlan) => {
     const worn = makeupUrl || resultUrl;
-    if (!selectedPlan || !worn || !plan?.templateId) return;
+    if (!selectedPlan || !worn || !plan?.templateId || !hasSource) return;
     const gen = ++hairGen.current;
     setHairPlan(plan);
     setHairBusy(true);
@@ -355,11 +355,18 @@ export default function Home() {
     setHairRequestId(undefined);
     setHairPollStartedAt(Date.now());
     try {
+      let file = sourceFile;
+      if (!file) {
+        const response = await fetch(examplePhotoUrl);
+        const blob = await response.blob();
+        file = new File([blob], "example-source.jpg", { type: blob.type || "image/jpeg" });
+      }
       const form = new FormData();
+      form.append("photo", file);
       form.append("lookId", selectedPlan.lookId);
-      form.append("sourceUrl", worn);
       form.append("context", JSON.stringify(context));
       form.append("templateId", plan.templateId);
+      if (makeupUrl && makeupPlan?.templateId) form.append("makeupTemplateId", makeupPlan.templateId);
       const response = await fetch("/api/hair", { method: "POST", body: form });
       const body = await response.json();
       if (hairGen.current !== gen) return;
@@ -414,7 +421,7 @@ export default function Home() {
       if (cancelled) return;
       const started = hairPollStartedAt || Date.now();
       const elapsed = Date.now() - started;
-      if (elapsed >= 120000) {
+      if (elapsed >= 240000) {
         setHairError("TASK_FAILED");
         setHairBusy(false);
         setHairRequestId(undefined);

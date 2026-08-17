@@ -3,6 +3,7 @@ import test from "node:test";
 import { hairPlanForTemplate, rankHairPlans, recommendHair } from "./hair-engine";
 import { rankMakeupPlans, recommendMakeup } from "./makeup-engine";
 import type { WearContext } from "./types";
+import { hairTaskPayload } from "./youcam";
 
 const brief: WearContext = {
   wearMoment: "client_meeting",
@@ -39,4 +40,14 @@ test("ranked hair plans keep the real template the user would pick", () => {
 test("empty makeup templates do not invent the rosy-chic demo", () => {
   assert.deepEqual(rankMakeupPlans(brief, [], 3), []);
   assert.equal(recommendMakeup(brief, []), undefined);
+});
+
+test("hair task keeps the user photo as src and only asks for their color when the template allows it", () => {
+  const withColor = hairTaskPayload({ srcFileId: "user-face", templateId: "bob", keepUserColor: true });
+  assert.equal(withColor.src_file_id, "user-face");
+  assert.equal(withColor.template_id, "bob");
+  assert.equal(withColor.hair_color, "src");
+  const styleOnly = hairTaskPayload({ srcFileUrl: "https://example.com/me.jpg", templateId: "pixie", keepUserColor: false });
+  assert.equal(styleOnly.src_file_url, "https://example.com/me.jpg");
+  assert.equal("hair_color" in styleOnly, false);
 });

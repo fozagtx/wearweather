@@ -3,8 +3,8 @@ import { NextResponse } from "next/server";
 import { getLookById } from "@/lib/catalogue";
 import { hairPlanForTemplate } from "@/lib/hair-engine";
 import { addTaskMapping } from "@/lib/task-cookie";
-import { isValidContext } from "@/lib/validation";
-import { createHairTask, fileFromImageUrl, listHairTemplates, mapYouCamError } from "@/lib/youcam";
+import { isValidContext, validatePhoto } from "@/lib/validation";
+import { createHairTask, listHairTemplates, mapYouCamError } from "@/lib/youcam";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,18 +13,21 @@ export async function POST(request: Request) {
   const correlationId = crypto.randomUUID();
   try {
     const form = await request.formData();
+    const photo = form.get("photo");
     const lookId = form.get("lookId");
-    const sourceUrl = typeof form.get("sourceUrl") === "string" ? String(form.get("sourceUrl")) : "";
     const templateId = typeof form.get("templateId") === "string" ? String(form.get("templateId")) : "";
+    const makeupTemplateId = typeof form.get("makeupTemplateId") === "string" ? String(form.get("makeupTemplateId")) : "";
     let context: unknown = null;
     try {
       context = JSON.parse(String(form.get("context") || ""));
     } catch {
       context = null;
     }
-    if (typeof lookId !== "string" || !templateId || !sourceUrl) {
+    if (!(photo instanceof File) || typeof lookId !== "string" || !templateId) {
       return NextResponse.json({ code: "UNEXPECTED_ERROR", correlationId }, { status: 400 });
     }
+    const validation = validatePhoto(photo);
+    if (!validation.ok) return NextResponse.json({ code: validation.code, correlationId }, { status: 400 });
     if (!isValidContext(context)) {
       return NextResponse.json({ code: "UNEXPECTED_ERROR", correlationId }, { status: 400 });
     }
@@ -34,10 +37,20 @@ export async function POST(request: Request) {
     const template = templates.find((item) => item.id === templateId);
     if (!template) return NextResponse.json({ code: "REFERENCE_INVALID", correlationId }, { status: 400 });
     const plan = hairPlanForTemplate(context, template);
-    const worn = await fileFromImageUrl(sourceUrl);
-    const started = await createHairTask({ sourceFile: worn, templateId: plan.templateId });
+    const started = await createHairTask({
+      sourceFile: photo,
+      templateId: plan.templateId,
+      keepUserColor: plan.keepColor,
+    });
     const requestId = `req_${crypto.randomBytes(12).toString("hex")}`;
-    await addTaskMapping(requestId, { providerTaskId: started.providerTaskId, lookId: look.id, createdAt: Date.now(), kind: "hair" });
+    await addTaskMapping(requestId, {
+      providerTaskId: started.providerTaskId,
+      lookId: look.id,
+      createdAt: Date.now(),
+      kind: "hair",
+      phase: "hair",
+      makeupTemplateId: makeupTemplateId || undefined,
+    });
     console.info(JSON.stringify({ event: "hair_requested", correlationId, lookId: look.id, templateId: plan.templateId }));
     return NextResponse.json({ requestId, status: "running", plan });
   } catch (error) {
