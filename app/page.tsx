@@ -523,7 +523,8 @@ export default function Home() {
           <SiteFooter />
         </>
       ) : (
-        <main className="bg-background pt-14">
+        <main className="flex h-[100svh] flex-col bg-background pt-14">
+          <div className="min-h-0 flex-1 overflow-y-auto lg:overflow-hidden">
           <CanvasDashboard
             mode={mode}
             context={context}
@@ -596,6 +597,7 @@ export default function Home() {
               setSolutions((current) => current.map((item) => (item.id === id ? { ...item, status: "dismissed" } : item)));
             }}
           />
+          </div>
           <AgentDock
             context={context}
             onContext={setContext}

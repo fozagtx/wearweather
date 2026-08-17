@@ -444,8 +444,8 @@ export function CanvasDashboard(dash: DashboardProps) {
   const onYou = Boolean(dash.resultUrl);
 
   return (
-    <div className="bg-background lg:h-[calc(100svh-3.5rem)] lg:overflow-hidden">
-      <div className="mx-auto flex h-full max-w-[1600px] flex-col px-4 pt-3 pb-20 sm:px-5">
+    <div className="bg-background lg:h-full lg:overflow-hidden">
+      <div className="mx-auto flex max-w-[1600px] flex-col px-4 pt-3 pb-3 sm:px-5 lg:h-full">
         <header className="flex shrink-0 justify-end">
           <StepRail photoReady={photoReady} lookReady={lookReady} onYou={onYou} />
         </header>
@@ -572,7 +572,7 @@ export function CanvasDashboard(dash: DashboardProps) {
             </section>
           </aside>
 
-          <div className="flex min-h-0 flex-1 flex-col">
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
             <LookPicker plans={dash.plans} selectedPlan={dash.selectedPlan} onSelectPlan={dash.onSelectPlan} />
             <MakeupPicker plans={dash.makeupPlans || []} selected={dash.makeupPlan} onSelect={(plan) => dash.onSelectMakeup?.(plan)} />
             <HairPicker plans={dash.hairPlans || []} selected={dash.hairPlan} onSelect={(plan) => dash.onSelectHair?.(plan)} />

@@ -225,8 +225,8 @@ export function AgentDock({
         : null;
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-sm">
-      <div className="pointer-events-auto mx-auto max-w-[1600px] px-4 sm:px-5">
+    <div className="shrink-0 border-t border-border bg-background pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+      <div className="mx-auto max-w-[1600px] px-4 sm:px-5">
         {turns.length === 0 && showPrompts && !waiting && !errorText && (
           <div className="flex flex-col gap-1 border-b border-border py-2">
             {prompts.map((prompt) => (
@@ -245,7 +245,7 @@ export function AgentDock({
         )}
 
         {turns.length > 0 && (
-          <div className="max-h-40 overflow-auto divide-y divide-border border-b border-border">
+          <div className="max-h-28 overflow-auto divide-y divide-border border-b border-border">
             {turns.map((turn) => {
               const open = openId === turn.id;
               return (
@@ -302,12 +302,12 @@ export function AgentDock({
         )}
 
         <PromptInput
-          className="rounded-none border-0 bg-transparent p-0 py-2 shadow-none"
+          className="flex items-end gap-2 rounded-none border-0 bg-transparent p-0 py-2 shadow-none"
           value={input}
           onValueChange={setInput}
           isLoading={waiting}
           disabled={waiting}
-          maxHeight={88}
+          maxHeight={72}
           onSubmit={() => ask(input.trim())}
         >
           <label className="sr-only" htmlFor="stylist-ask">
@@ -315,12 +315,13 @@ export function AgentDock({
           </label>
           <PromptInputTextarea
             id="stylist-ask"
+            className="min-h-11 flex-1"
             placeholder="What should I wear today?"
             onFocus={() => {
               if (turns.length === 0) setShowPrompts(true);
             }}
           />
-          <PromptInputActions className="p-0">
+          <PromptInputActions className="shrink-0 p-0 pb-0.5">
             {acceptTarget && (
               <Button
                 size="sm"
