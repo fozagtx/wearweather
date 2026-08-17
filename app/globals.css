@@ -1,36 +1,38 @@
 @import "tailwindcss";
 
+@import "tailwindcss";
+
 :root {
-  --background: #0c0c09;
-  --foreground: #fbfbf9;
-  --card: #1d1d16;
-  --card-foreground: #fbfbf9;
-  --popover: #1d1d16;
-  --muted: #2b2b22;
-  --muted-foreground: #abab9c;
-  --accent: #2b2b22;
-  --secondary: #2b2b22;
-  --primary: #e8e8e3;
-  --primary-foreground: #1d1d16;
-  --border: #ffffff1a;
-  --input: #ffffff26;
+  --background: #fbfbf9;
+  --foreground: #1a1a14;
+  --card: #ffffff;
+  --card-foreground: #1a1a14;
+  --popover: #ffffff;
+  --muted: #f0f0e8;
+  --muted-foreground: #6b6b5c;
+  --accent: #f0f0e8;
+  --secondary: #f0f0e8;
+  --primary: #1a1a14;
+  --primary-foreground: #fbfbf9;
+  --border: #1a1a141a;
+  --input: #1a1a1426;
   --ring: #7c7c67;
   --brand: #d25611;
   --brand-dark: #9e400a;
-  --brand-light: #e8804a;
-  --destructive: #ff6568;
-  --sidebar: #1d1d16;
+  --brand-light: #c04a0e;
+  --destructive: #c43b3e;
+  --sidebar: #ffffff;
   --sidebar-primary: #1447e6;
-  --chart-1: #d8d8d0;
-  --chart-2: #abab9c;
+  --chart-1: #1a1a14;
+  --chart-2: #6b6b5c;
   --chart-3: #7c7c67;
-  --chart-4: #4a4a3c;
-  --chart-5: #2b2b22;
-  --preview-border: #ffffff22;
-  --preview-card: #25251c;
-  --preview-muted-foreground: #9a9a88;
-  --preview-divider: #ffffff14;
-  --preview-sidebar: #14140f;
+  --chart-4: #c4c4b4;
+  --chart-5: #ecece4;
+  --preview-border: #1a1a141f;
+  --preview-card: #f7f7f1;
+  --preview-muted-foreground: #6b6b5c;
+  --preview-divider: #1a1a1414;
+  --preview-sidebar: #ffffff;
   --mockup-shell-radius: 10px;
   --mockup-inner-radius: 8px;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -63,7 +65,10 @@
 
 * { box-sizing: border-box; }
 
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+  color-scheme: light;
+}
 
 body {
   margin: 0;
@@ -112,9 +117,9 @@ button, a, input, textarea {
 
 .halftone-slogan {
   background-image:
-    radial-gradient(circle at 30% 40%, #e8d48a 0.7px, transparent 0.8px),
-    radial-gradient(circle at 70% 60%, #8a8a6a 0.65px, transparent 0.75px),
-    radial-gradient(circle at 50% 50%, #c4c4a8 0.55px, transparent 0.65px);
+    radial-gradient(circle at 30% 40%, #9e400a 0.7px, transparent 0.8px),
+    radial-gradient(circle at 70% 60%, #6b6b5c 0.65px, transparent 0.75px),
+    radial-gradient(circle at 50% 50%, #1a1a14 0.55px, transparent 0.65px);
   background-size: 4px 4px, 5px 5px, 3px 3px;
   -webkit-background-clip: text;
   background-clip: text;
@@ -126,7 +131,7 @@ button, a, input, textarea {
   position: relative;
   height: min(70vh, 680px);
   overflow: hidden;
-  background: #1a1a14;
+  background: #ecece4;
   border: 1px solid var(--border);
   border-radius: var(--mockup-shell-radius);
 }

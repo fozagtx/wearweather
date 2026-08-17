@@ -5,6 +5,7 @@ import Image from "next/image";
 import { WwLogo } from "@/components/ww-logo";
 import { getActiveCatalogue } from "@/lib/catalogue";
 import { exampleBrief, examplePhotoUrl } from "@/lib/example-brief";
+import { recommendMakeup } from "@/lib/makeup-engine";
 import { rankWearPlans } from "@/lib/recommendation-engine";
 import {
   PREFERENCES,
@@ -50,7 +51,7 @@ function TrafficLights() {
 function WindowChrome({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div
-      className="w-full overflow-hidden border bg-[var(--preview-sidebar)] shadow-[0_24px_80px_rgba(0,0,0,0.45)]"
+      className="w-full overflow-hidden border bg-[var(--preview-sidebar)] shadow-[0_24px_80px_rgba(26,26,20,0.12)]"
       style={{
         borderColor: "var(--preview-border)",
         borderRadius: "var(--mockup-shell-radius)",
@@ -68,7 +69,7 @@ function WindowChrome({ title, children }: { title: string; children: React.Reac
   );
 }
 
-function BriefStrip({ context }: { context: WearContext }) {
+export function BriefStrip({ context }: { context: WearContext }) {
   return (
     <div className="flex flex-wrap gap-1.5 font-mono text-[10px] tracking-[0.2px] text-[var(--preview-muted-foreground)]">
       <span className="rounded-full border border-border px-2 py-0.5 text-foreground/80">
@@ -88,6 +89,9 @@ function BriefStrip({ context }: { context: WearContext }) {
           {preferenceLabels[id]}
         </span>
       ))}
+      {context.makeupFinish && (
+        <span className="rounded-full border border-brand/40 px-2 py-0.5 text-brand-light">Makeup finish</span>
+      )}
     </div>
   );
 }
@@ -95,44 +99,87 @@ function BriefStrip({ context }: { context: WearContext }) {
 export function HeroBoard() {
   const plans = useMemo(() => rankWearPlans(exampleBrief, 1), []);
   const reduced = usePrefersReducedMotion();
-  const tick = useTick(2400, !reduced);
-  const highlight = reduced ? 0 : tick % 3;
+  const [paused, setPaused] = useState(false);
+  const [index, setIndex] = useState(0);
+  const plan = plans[index] || plans[0];
+
+  useEffect(() => {
+    if (reduced || paused || plans.length < 2) return;
+    const id = window.setInterval(() => setIndex((current) => (current + 1) % plans.length), 3200);
+    return () => window.clearInterval(id);
+  }, [reduced, paused, plans.length, index]);
 
   return (
     <WindowChrome title="Example brief · live ranking">
-      <div className="p-3 text-left sm:p-4">
-        <p className="font-mono text-[10px] tracking-[0.5px] text-[var(--preview-muted-foreground)]">
-          Same engine as the app · {getActiveCatalogue().length} catalogue looks · top 3
-        </p>
-        <div className="mt-2">
-          <BriefStrip context={exampleBrief} />
+      <div
+        className="text-left"
+        onMouseEnter={() => setPaused(true)}
+        onMouseLeave={() => setPaused(false)}
+      >
+        <div className="px-3 pt-3 sm:px-4 sm:pt-4">
+          <p className="font-mono text-[10px] tracking-[0.5px] text-[var(--preview-muted-foreground)]">
+            Same engine as the app · {getActiveCatalogue().length} catalogue looks · top 3
+          </p>
+          <div className="mt-2">
+            <BriefStrip context={exampleBrief} />
+          </div>
         </div>
-        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
-          {plans.map((plan, index) => (
-            <article
-              key={plan.planId}
-              className={`overflow-hidden rounded-[var(--mockup-inner-radius)] border bg-[var(--preview-card)] ${
-                highlight === index ? "border-brand/70" : ""
-              }`}
-              style={{ borderColor: highlight === index ? undefined : "var(--preview-border)" }}
-            >
-              <div className="relative h-36 bg-muted">
-                <Image src={plan.sourceImageUrl} alt={plan.title} fill className="object-cover" sizes="200px" />
-                <span className="absolute top-2 left-2 rounded bg-background/85 px-1.5 py-0.5 font-mono text-[9px]">
-                  0{plan.rank}
-                </span>
+        <div className="relative mx-3 mt-3 overflow-hidden rounded-[var(--mockup-inner-radius)] border bg-muted sm:mx-4" style={{ borderColor: "var(--preview-border)" }}>
+          <div className="relative aspect-[4/5] min-h-[280px] w-full sm:aspect-[5/6] sm:min-h-[360px]">
+            {plans.map((item, slide) => (
+              <div
+                key={item.planId}
+                className="absolute inset-0"
+                style={{
+                  transform: `translateX(${(slide - index) * 100}%)`,
+                  transition: reduced ? "none" : "transform 0.55s var(--ease-out)",
+                }}
+              >
+                <Image
+                  src={item.sourceImageUrl}
+                  alt={item.title}
+                  fill
+                  priority={slide === 0}
+                  sizes="(min-width: 1024px) 560px, 100vw"
+                  className="object-cover"
+                />
               </div>
-              <div className="p-2.5">
-                <p className="text-[12px] font-medium leading-tight">{plan.title}</p>
-                <p className="mt-1 truncate font-mono text-[10px] text-[var(--preview-muted-foreground)]">
-                  {plan.garmentMetadataSummary.join(" · ")}
-                </p>
-                <p className="mt-2 line-clamp-2 text-[10px] leading-snug text-[var(--preview-muted-foreground)]">
-                  {plan.reasons[0]}
-                </p>
-              </div>
-            </article>
-          ))}
+            ))}
+          </div>
+          <span className="absolute top-3 left-3 rounded-md border border-white/20 bg-background/85 px-2 py-1 font-mono text-[10px]">
+            0{plan.rank} / 03
+          </span>
+          {plan.rank === 1 && (
+            <span className="absolute top-3 right-3 rounded-md bg-brand px-2 py-1 font-mono text-[10px] text-[#fff8ef]">
+              FIRST LOOK
+            </span>
+          )}
+        </div>
+        <div className="flex items-end justify-between gap-4 px-3 py-4 sm:px-4">
+          <div className="min-w-0">
+            <p className="text-[15px] font-medium tracking-[-0.3px]">{plan.title}</p>
+            <p className="mt-1 truncate font-mono text-[10px] text-[var(--preview-muted-foreground)]">
+              {plan.garmentMetadataSummary.join(" · ")}
+            </p>
+            <p className="mt-2 line-clamp-2 text-[12px] leading-snug text-[var(--preview-muted-foreground)]">
+              {plan.reasons[0]}
+            </p>
+          </div>
+          <div className="flex shrink-0 gap-1.5 pb-1" role="tablist" aria-label="Ranked looks">
+            {plans.map((item, slide) => (
+              <button
+                key={item.planId}
+                type="button"
+                role="tab"
+                aria-selected={slide === index}
+                aria-label={`Show plan ${item.rank}: ${item.title}`}
+                className={`h-1.5 rounded-full transition-[width,background-color] duration-300 ${
+                  slide === index ? "w-6 bg-brand" : "w-1.5 bg-white/25 hover:bg-white/45"
+                }`}
+                onClick={() => setIndex(slide)}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </WindowChrome>
@@ -149,6 +196,7 @@ export function BriefTerminal() {
     `out    ${contextLabels.outdoorDuration[exampleBrief.outdoorDuration]}`,
     `form   ${contextLabels.formality[exampleBrief.formality]}`,
     `prefs  ${exampleBrief.preferences.map((id) => preferenceLabels[id]).join(" · ")}`,
+    `makeup ${exampleBrief.makeupFinish ? "opt-in · recommendMakeup(brief)" : "skipped"}`,
     `rank   ${plans.map((plan) => `${plan.rank}. ${plan.title}`).join(" · ")}`,
   ];
   const shown = reduced ? lines.length : Math.min(lines.length, 1 + (tick % (lines.length + 1)));
@@ -221,7 +269,7 @@ export function TryOnDetail() {
             <div className="absolute top-2 right-2 rounded bg-background/80 px-1.5 py-0.5 font-mono text-[9px]">CATALOGUE STILL</div>
           </div>
           <p className="mt-2 text-[11px] leading-relaxed text-[var(--preview-muted-foreground)]">
-            Live YouCam cloth-v4 runs after you pick a plan. This slider is the example photo against the ranked look’s catalogue image — not a generated result.
+            Live YouCam cloth-v4 runs after you pick a plan. This slider is the example photo against the ranked look’s catalogue image, not a generated result.
           </p>
         </div>
         <aside
@@ -235,6 +283,41 @@ export function TryOnDetail() {
           <p className="mt-4 font-mono tracking-[0.4px] text-foreground/70">LIMIT</p>
           <p className="mt-1">Virtual rendering does not guarantee fit, fabric feel, or sizing.</p>
         </aside>
+      </div>
+    </WindowChrome>
+  );
+}
+
+export function MakeupBoard() {
+  const plan = useMemo(() => recommendMakeup(exampleBrief, []), []);
+  return (
+    <WindowChrome title="Makeup finish · example brief">
+      <div className="min-h-[280px] p-4 text-left">
+        <p className="font-mono text-[10px] tracking-[0.5px] text-[var(--preview-muted-foreground)]">
+          Same brief as the outfit · YouCam Look VTO
+        </p>
+        <p className="mt-3 text-lg font-medium tracking-[-0.4px]">{plan.title}</p>
+        <p className="mt-1 font-mono text-[10px] tracking-[0.4px] text-brand-light">
+          {plan.category} · {plan.templateId}
+        </p>
+        <ul className="mt-4 space-y-2">
+          {plan.reasons.map((reason) => (
+            <li key={reason} className="text-[11px] leading-snug text-[var(--preview-muted-foreground)]">
+              ↗ {reason}
+            </li>
+          ))}
+        </ul>
+        <div className="mt-4 flex flex-wrap gap-3">
+          {plan.swatches.map((swatch) => (
+            <span key={swatch.name} className="flex items-center gap-2 font-mono text-[10px] text-[var(--preview-muted-foreground)]">
+              <span className="size-3.5 rounded-full border border-white/20" style={{ background: swatch.hex }} />
+              {swatch.name} {swatch.hex}
+            </span>
+          ))}
+        </div>
+        <p className="mt-5 text-[10px] leading-relaxed text-[var(--preview-muted-foreground)]">
+          Opt in on the brief. We do not infer gender from the photo. Virtual makeup is a visualisation, not a product match.
+        </p>
       </div>
     </WindowChrome>
   );
@@ -291,7 +374,7 @@ export function SessionPreview() {
         <p className="mt-1 text-[var(--preview-muted-foreground)]">
           One person, facing forward, standing. Face and shoulders visible. JPG or PNG, 10 MB max.
         </p>
-        <div className="mt-4 grid place-items-center rounded-lg border border-dashed border-white/25 py-8 text-[var(--preview-muted-foreground)]">
+        <div className="mt-4 grid place-items-center rounded-lg border border-dashed border-foreground/20 py-8 text-[var(--preview-muted-foreground)]">
           Choose a JPG or PNG
         </div>
       </div>

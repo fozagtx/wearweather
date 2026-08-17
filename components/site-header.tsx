@@ -8,7 +8,6 @@ const nav = [
   { href: "#demo", label: "Example" },
   { href: "#features", label: "How it works" },
   { href: "#faq", label: "FAQ" },
-  { href: "https://github.com/fozagtx/wearweather", label: "GitHub", external: true },
 ];
 
 export function SiteHeader({
@@ -32,7 +31,7 @@ export function SiteHeader({
   }, [open]);
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 h-14 bg-background transition-colors">
+    <header className="fixed inset-x-0 top-0 z-50 h-14 border-b border-border bg-background/90 backdrop-blur-md transition-colors">
       <div className="px-4 sm:px-8 lg:px-[30px]">
         <div className="mx-auto max-w-7xl">
           <div className="flex h-14 items-center justify-between">
@@ -46,7 +45,6 @@ export function SiteHeader({
                   <a
                     key={item.label}
                     href={item.href}
-                    {...(item.external ? { target: "_blank", rel: "noreferrer" } : {})}
                     className="h-8 rounded-2xl border border-transparent bg-transparent px-3 text-sm text-foreground/90 transition-colors hover:border-border hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     {item.label}
@@ -67,7 +65,7 @@ export function SiteHeader({
                   onClick={onStart}
                   className="h-8 rounded-2xl bg-foreground px-3 text-sm font-semibold tracking-[-0.5px] text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  Start rehearsal
+                  Test it
                 </button>
               )}
             </div>
@@ -77,7 +75,7 @@ export function SiteHeader({
                 onClick={onStart}
                 className="h-8 rounded-2xl bg-foreground px-3 text-sm font-semibold tracking-[-0.5px] text-background transition-opacity hover:opacity-90"
               >
-                Start
+                Test it
               </button>
               <button
                 type="button"
@@ -100,7 +98,6 @@ export function SiteHeader({
               <a
                 key={item.label}
                 href={item.href}
-                {...(item.external ? { target: "_blank", rel: "noreferrer" } : {})}
                 className="rounded-2xl px-3 py-3 text-sm hover:bg-muted/60"
                 onClick={() => setOpen(false)}
               >

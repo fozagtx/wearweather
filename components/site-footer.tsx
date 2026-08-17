@@ -28,7 +28,7 @@ const columns = [
 
 export function SiteFooter() {
   return (
-    <footer className="bg-card">
+    <footer className="border-t border-border bg-muted/50">
       <div className="px-4 py-14 sm:px-8 sm:py-20 lg:px-[30px]">
         <div className="mx-auto max-w-7xl">
           <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.75fr)]">

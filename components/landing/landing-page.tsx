@@ -5,16 +5,18 @@ import Image from "next/image";
 import { Plus, X } from "lucide-react";
 import { Eyebrow, GhostButton, PrimaryButton, SectionShell } from "@/components/ui";
 import {
+  BriefStrip,
   BriefTerminal,
   HeroBoard,
   MockupStage,
+  MakeupBoard,
   PlansBoard,
   PriorityModal,
   SessionPreview,
   TryOnDetail,
 } from "@/components/landing/mockups";
 import { getActiveCatalogue } from "@/lib/catalogue";
-import { GITHUB_REPO, exampleBrief } from "@/lib/example-brief";
+import { exampleBrief } from "@/lib/example-brief";
 import { rankWearPlans } from "@/lib/recommendation-engine";
 import { PREFERENCES, contextLabels, preferenceLabels } from "@/lib/types";
 
@@ -30,7 +32,7 @@ const features = [
   {
     eyebrow: "The day",
     title: "Tell it the day you actually have.",
-    body: "Four inputs: what you’re dressing for, how it feels outside, time outdoors, and polish. WearWeather ranks from those selections — not assumptions about you.",
+    body: "Five inputs: what you’re dressing for, how it feels outside, time outdoors, polish, and whether you want a makeup finish. WearWeather ranks from those selections, not assumptions about you.",
     media: <BriefTerminal />,
     src: "/optimized/feature3.webp",
     alt: "Ocean and dunes behind the live ranking preview",
@@ -46,10 +48,18 @@ const features = [
   {
     eyebrow: "Try-on",
     title: "See the look on your photo, then read the limit.",
-    body: "When you start try-on, the app sends your photo and the catalogue still to YouCam cloth-v4. Until that finishes, you are looking at the source photo and the catalogue reference — not a generated result.",
+    body: "When you start try-on, the app sends your photo and the catalogue still to YouCam cloth-v4. Until that finishes, you are looking at the source photo and the catalogue reference, not a generated result.",
     media: <TryOnDetail />,
     src: "/optimized/feature2.webp",
     alt: "Forest behind the source and catalogue comparison",
+  },
+  {
+    eyebrow: "Makeup",
+    title: "A day-matched finish, if you want one.",
+    body: "Opt in on the brief. WearWeather ranks a YouCam Look VTO template against the same day (meeting, heat, commute), then you can try it on the clothes rehearsal. Makeup VTO is the fallback. We do not infer gender from your photo.",
+    media: <MakeupBoard />,
+    src: "/optimized/feature3.webp",
+    alt: "Ocean behind the makeup finish recommendation",
   },
   {
     eyebrow: "Priorities",
@@ -72,11 +82,15 @@ const features = [
 const faqs = [
   {
     q: "I already use Pinterest or a retailer try-on. Is this for me?",
-    a: "WearWeather does not replace a tailor, a retailer, or your camera roll. It takes a day brief and returns three explainable plans from a labelled catalogue, then optionally runs YouCam cloth-v4 on one look.",
+    a: "WearWeather does not replace a tailor, a retailer, or your camera roll. It takes a day brief and returns three explainable plans from a labelled catalogue, then optionally runs YouCam cloth-v4 and Look VTO on one look.",
   },
   {
     q: "What is in the catalogue?",
     a: `${getActiveCatalogue().length} active editorial looks, each with garment metadata: layer weight, removable layer, lining, movement tags, coverage, care. Unknown values never become positive reasons.`,
+  },
+  {
+    q: "Can I try makeup with the look?",
+    a: "Yes, if you opt in on the brief. After clothes try-on, WearWeather recommends a YouCam Look VTO template scored against the same day, with Makeup VTO effects as fallback. Anyone can opt in; the app does not infer gender from the photo. Virtual makeup is a visualisation, not a product match guarantee.",
   },
   {
     q: "How does ranking work?",
@@ -88,7 +102,7 @@ const faqs = [
   },
   {
     q: "Can I use my own photo?",
-    a: "Yes. JPG or PNG, under 10 MB, one person facing forward with shoulders visible. The file stays as a local object URL until you start try-on. WearWeather does not assess body, health, or worth.",
+    a: "Yes. JPG or PNG, under 10 MB, one person facing forward with the whole face and shoulders visible. The file stays as a local object URL until you start try-on. WearWeather does not assess body, health, or worth.",
   },
 ];
 
@@ -168,74 +182,50 @@ export function LandingPage({
   onExample: () => void;
   onUpload: () => void;
 }) {
-  const [copied, setCopied] = useState(false);
   const plans = useMemo(() => rankWearPlans(exampleBrief, 1), []);
   const lookCount = getActiveCatalogue().length;
 
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(GITHUB_REPO);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1600);
-    } catch {
-      setCopied(false);
-    }
-  };
-
   return (
     <div id="top">
-      <div className="relative flex flex-col items-center overflow-hidden pt-24 pb-8">
-        <div className="relative mx-auto w-full max-w-[1600px] px-4">
-          <div className="mx-auto max-w-4xl space-y-5 text-center sm:space-y-7">
-            <h1 className="text-4xl font-normal tracking-[-0.5px] text-balance sm:text-5xl md:text-6xl lg:text-[4.75rem] lg:leading-[0.98]">
+      <section id="demo" className="relative px-4 pt-24 pb-10 sm:px-8 sm:pt-28 sm:pb-14 lg:px-[30px] lg:pt-32 lg:pb-16">
+        <div className="mx-auto grid max-w-[1600px] items-center gap-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-12 xl:gap-16">
+          <div className="max-w-xl lg:max-w-none">
+            <Eyebrow>See the look. Plan the wear.</Eyebrow>
+            <h1 className="mt-5 text-4xl font-normal tracking-[-0.5px] text-balance sm:text-5xl md:text-6xl lg:text-[4.35rem] lg:leading-[0.96]">
               Stop guessing outfits.
               <br />
               Start rehearsing the day.
             </h1>
-            <p className="mx-auto max-w-4xl text-base leading-8 text-muted-foreground sm:text-xl">
-              Rank {lookCount} labelled looks against weather, commute, and how you move. Then try one on your photo.
+            <p className="mt-6 max-w-xl text-base leading-8 text-muted-foreground sm:text-xl">
+              Rank {lookCount} labelled looks against weather, commute, and how you move. Then try the outfit, and an optional makeup finish, on your photo.
             </p>
-          </div>
-          <div className="mt-6 flex flex-wrap justify-center gap-2 sm:gap-4">
-            <PrimaryButton onClick={onExample}>Try the example brief</PrimaryButton>
-            <GhostButton onClick={onUpload}>Use my photo</GhostButton>
-            <a
-              href={GITHUB_REPO}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex min-h-11 items-center gap-2 rounded-3xl border border-border bg-background px-5 py-3 text-sm transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              GitHub
-            </a>
-          </div>
-          <div className="mt-4 flex justify-center">
-            <button
-              type="button"
-              onClick={copy}
-              aria-label={`Copy repository URL: ${GITHUB_REPO}`}
-              className="landing-install-command rounded-3xl border border-border bg-card/70 px-3 py-2.5 font-mono text-xs tracking-[0.5px] text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground sm:text-sm"
-            >
-              <span className="text-muted-foreground/70">$ </span>
-              github.com/fozagtx/wearweather
-              <span className="ml-3 text-foreground/80">{copied ? "Copied" : "Copy"}</span>
-            </button>
-          </div>
-          <div id="demo" className="relative mx-auto mt-12 w-full max-w-[1400px] overflow-hidden">
-            <Image
-              src="/optimized/hero-background.webp"
-              alt=""
-              fill
-              priority
-              sizes="100vw"
-              className="object-cover"
-            />
-            <div className="absolute inset-0 bg-background/35" />
-            <div className="relative px-2 py-8 sm:px-6 sm:py-12 lg:px-10">
-              <HeroBoard />
+            <div className="mt-8 flex flex-wrap gap-2 sm:gap-3">
+              <PrimaryButton onClick={onExample}>Try the example brief</PrimaryButton>
+              <GhostButton onClick={onUpload}>Use my photo</GhostButton>
+            </div>
+            <div className="mt-8">
+              <p className="font-mono text-[10px] tracking-[0.5px] text-muted-foreground">LIVE EXAMPLE BRIEF</p>
+              <div className="mt-3">
+                <BriefStrip context={exampleBrief} />
+              </div>
             </div>
           </div>
+          <div className="relative min-w-0">
+            <div className="pointer-events-none absolute -inset-8 -z-10 hidden overflow-hidden rounded-[18px] opacity-40 lg:block">
+              <Image
+                src="/optimized/hero-background.webp"
+                alt=""
+                fill
+                priority
+                sizes="(min-width: 1024px) 52vw, 100vw"
+                className="object-cover"
+              />
+              <div className="absolute inset-0 bg-background/40" />
+            </div>
+            <HeroBoard />
+          </div>
         </div>
-      </div>
+      </section>
 
       <Marquee />
 

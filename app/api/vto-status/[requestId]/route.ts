@@ -10,6 +10,9 @@ export async function GET(_request: Request, context: { params: Promise<{ reques
   const mapping = await getTaskMapping(requestId);
   if (!mapping) return NextResponse.json({ status: "error", code: "SESSION_EXPIRED" }, { status: 404 });
   try {
+    if (mapping.kind && mapping.kind !== "clothes") {
+      return NextResponse.json({ status: "error", code: "SESSION_EXPIRED" }, { status: 404 });
+    }
     const task = await getClothesTask(mapping.providerTaskId);
     if (task.status === "success" && task.resultUrl) {
       console.info(JSON.stringify({ event: "vto_completed", requestId, lookId: mapping.lookId }));

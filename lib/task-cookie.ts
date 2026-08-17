@@ -2,10 +2,11 @@ import crypto from "node:crypto";
 import { cookies } from "next/headers";
 
 const COOKIE_NAME = "wearweather_tasks";
-const MAX_TASKS = 3;
+export const MAX_TASKS = 6;
 const TTL_SECONDS = 60 * 60 * 24;
 
-type TaskMapping = { providerTaskId: string; lookId: string; createdAt: number };
+export type TaskKind = "clothes" | "look" | "makeup";
+type TaskMapping = { providerTaskId: string; lookId: string; createdAt: number; kind?: TaskKind };
 type CookiePayload = { expiresAt: number; tasks: Record<string, TaskMapping> };
 
 function secret() {
@@ -61,4 +62,9 @@ export async function clearTaskCookie() {
 export async function getTaskMapping(requestId: string) {
   const payload = await readTaskCookie();
   return payload.tasks[requestId];
+}
+
+export async function taskCount() {
+  const payload = await readTaskCookie();
+  return Object.keys(payload.tasks).length;
 }

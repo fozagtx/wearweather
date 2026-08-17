@@ -17,6 +17,7 @@ export type WearContext = {
   outdoorDuration: OutdoorDuration;
   formality: Formality;
   preferences: PreferenceId[];
+  makeupFinish: boolean;
 };
 
 export type LookCatalogRecord = {

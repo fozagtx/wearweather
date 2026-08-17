@@ -2,7 +2,7 @@
 
 _Status: applied (GH8S)_
 
-WearWeather uses the GH8S design system: a single dark warm theme, giant Geist headlines, IBM Plex Mono metadata, burnt-orange accent used sparingly, and live DOM-built product mockups on scenic photographic backdrops.
+WearWeather uses a warm white theme: giant Geist headlines, IBM Plex Mono metadata, burnt-orange accent used sparingly, and live DOM-built product mockups on scenic photographic backdrops.
 
 ## Product
 
@@ -12,14 +12,14 @@ See the look. Plan the wear. A visual rehearsal for the day you actually have.
 
 | Token | Hex | Use |
 | --- | --- | --- |
-| `--background` | `#0c0c09` | Page |
-| `--foreground` | `#fbfbf9` | Headlines |
-| `--card` | `#1d1d16` | Elevated surfaces |
-| `--muted` | `#2b2b22` | Chips, secondary fills |
-| `--muted-foreground` | `#abab9c` | Body copy |
-| `--primary` | `#e8e8e3` | Inverted CTAs |
+| `--background` | `#fbfbf9` | Page |
+| `--foreground` | `#1a1a14` | Headlines |
+| `--card` | `#ffffff` | Elevated surfaces |
+| `--muted` | `#f0f0e8` | Chips, secondary fills |
+| `--muted-foreground` | `#6b6b5c` | Body copy |
+| `--primary` | `#1a1a14` | Inverted CTAs |
 | `--brand` | `#d25611` | Mascot, status, sparse accent |
-| `--border` | `#ffffff1a` | Hairlines |
+| `--border` | `#1a1a141a` | Hairlines |
 
 ## Typography
 

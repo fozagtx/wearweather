@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import type { MakeupPlan } from "@/lib/makeup-engine";
 import { contextLabels, preferenceLabels, type PreferenceId, type WearContext, type WearPlan } from "@/lib/types";
 import { Eyebrow, GhostButton, PrimaryButton } from "@/components/ui";
 
@@ -15,7 +16,7 @@ export function StepRail({ current }: { current: string }) {
           <div
             key={step}
             className={`flex items-center gap-2 border-b pb-2.5 text-[11px] ${
-              index <= active ? "border-brand text-foreground" : "border-border text-[#6f7065]"
+              index <= active ? "border-brand text-foreground" : "border-border text-muted-foreground"
             }`}
           >
             <span className="hidden font-mono text-[10px] sm:inline">{String(index + 1).padStart(2, "0")}</span>
@@ -29,7 +30,7 @@ export function StepRail({ current }: { current: string }) {
 
 function Panel({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <section className={`mx-auto max-w-[900px] rounded-[10px] border border-border bg-card p-6 shadow-[0_24px_80px_rgba(0,0,0,0.28)] sm:p-10 lg:p-14 ${className}`}>
+    <section className={`mx-auto max-w-[900px] rounded-[10px] border border-border bg-card p-6 shadow-[0_16px_48px_rgba(26,26,20,0.08)] sm:p-10 lg:p-14 ${className}`}>
       {children}
     </section>
   );
@@ -98,7 +99,7 @@ export function UploadPanel({
       ) : (
         <button
           type="button"
-          className="mt-5 flex min-h-[150px] w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-white/30 bg-white/3 text-muted-foreground transition-colors hover:border-brand-light hover:bg-brand/10"
+          className="mt-5 flex min-h-[150px] w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-foreground/20 bg-muted/50 text-muted-foreground transition-colors hover:border-brand-light hover:bg-brand/10"
           onClick={() => inputRef.current?.click()}
         >
           <span className="text-2xl text-brand-light">＋</span>
@@ -151,7 +152,7 @@ function ChoiceGroup<T extends string>({
               className={`block rounded-2xl border px-3.5 py-3 text-xs transition-colors ${
                 value === option
                   ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border text-muted-foreground hover:border-white/30 hover:text-foreground"
+                  : "border-border text-muted-foreground hover:border-foreground/25 hover:text-foreground"
               }`}
             >
               {labels[option]}
@@ -181,7 +182,7 @@ export function ContextForm({
           <Eyebrow>The day ahead</Eyebrow>
           <h2 className="mt-3 text-3xl font-medium tracking-[-0.5px] sm:text-5xl">Give the look a real-world brief.</h2>
           <p className="mt-3 max-w-[500px] text-sm leading-relaxed text-muted-foreground">
-            We use your selections — not assumptions about you — to shape the shortlist.
+            We use your selections, not assumptions about you, to shape the shortlist.
           </p>
         </div>
         <span className="hidden font-mono text-[10px] tracking-[0.5px] text-muted-foreground sm:block">01 / 02</span>
@@ -215,6 +216,18 @@ export function ContextForm({
           labels={contextLabels.formality}
           onChange={(formality) => onChange({ ...context, formality })}
         />
+        <div>
+          <ChoiceGroup
+            label="Want a makeup finish with this look?"
+            value={context.makeupFinish ? "yes" : "no"}
+            options={["yes", "no"] as const}
+            labels={{ yes: "Yes, match a finish to this day", no: "Skip makeup" }}
+            onChange={(value) => onChange({ ...context, makeupFinish: value === "yes" })}
+          />
+          <p className="mt-2.5 max-w-[520px] text-xs leading-relaxed text-muted-foreground">
+            Optional. Anyone can opt in. WearWeather does not infer gender from your photo. It ranks a YouCam look against the same brief as the outfit.
+          </p>
+        </div>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <GhostButton onClick={onBack}>← Back</GhostButton>
@@ -252,7 +265,7 @@ function PreferenceChips({
               key={preference}
               type="button"
               className={`flex min-h-[58px] items-center gap-3 rounded-2xl border px-4 text-left text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                on ? "border-brand bg-brand font-semibold text-[#fff8ef]" : "border-border text-muted-foreground hover:border-white/30 hover:text-foreground"
+                on ? "border-brand bg-brand font-semibold text-[#fff8ef]" : "border-border text-muted-foreground hover:border-foreground/25 hover:text-foreground"
               }`}
               onClick={() => toggle(preference)}
               aria-pressed={on}
@@ -343,16 +356,22 @@ export function PlansView({
         </span>
         <span className="size-1 rounded-full bg-brand" />
         <span>{context.preferences.map((preference) => preferenceLabels[preference]).join(" · ")}</span>
+        {context.makeupFinish && (
+          <>
+            <span className="size-1 rounded-full bg-brand" />
+            <span>Makeup finish on</span>
+          </>
+        )}
       </div>
       <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {plans.map((plan) => (
           <article
             key={plan.planId}
-            className={`overflow-hidden rounded-[9px] border bg-card transition-colors hover:border-white/30 ${
+            className={`overflow-hidden rounded-[9px] border bg-card transition-colors hover:border-foreground/25 ${
               plan.rank === 1 ? "border-brand/60 shadow-[0_0_0_1px_rgba(210,86,17,0.16)]" : "border-border"
             }`}
           >
-            <div className="relative h-[290px] overflow-hidden bg-[#303229]">
+            <div className="relative h-[290px] overflow-hidden bg-muted">
               <img src={plan.sourceImageUrl} alt={`Reference outfit: ${plan.title}`} className="h-full w-full object-cover" />
               <span className="absolute top-3 left-3 rounded-lg border border-white/20 bg-background/85 px-2 py-1.5 font-mono text-[10px]">
                 0{plan.rank}
@@ -434,7 +453,7 @@ export function DetailView({
       <button type="button" className="justify-self-start text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground xl:col-span-2" onClick={onBack}>
         ← Back to plans
       </button>
-      <div className="relative h-[470px] overflow-hidden rounded-[9px] border border-border bg-[#303229] xl:h-[650px]">
+      <div className="relative h-[470px] overflow-hidden rounded-[9px] border border-border bg-muted xl:h-[650px]">
         <img src={plan.sourceImageUrl} alt={`Complete look reference for ${plan.title}`} className="h-full w-full object-cover" />
         <span className="absolute bottom-4 left-4 rounded-md border border-border bg-background/85 px-2.5 py-2 font-mono text-[10px] tracking-[0.5px]">
           REFERENCE LOOK / {String(plan.rank).padStart(2, "0")}
@@ -495,9 +514,9 @@ export function ProcessingView({
   errorMessages: Record<string, string>;
 }) {
   return (
-    <section className="mx-auto flex min-h-[520px] max-w-[700px] flex-col items-center justify-center rounded-[10px] border border-border bg-card p-10 text-center shadow-[0_24px_80px_rgba(0,0,0,0.28)]">
+    <section className="mx-auto flex min-h-[520px] max-w-[700px] flex-col items-center justify-center rounded-[10px] border border-border bg-card p-10 text-center shadow-[0_16px_48px_rgba(26,26,20,0.08)]">
       <div className="relative grid size-[90px] place-items-center rounded-full border border-brand/35">
-        <span className="absolute inset-[13px] rounded-full border border-dashed border-white/20" />
+        <span className="absolute inset-[13px] rounded-full border border-dashed border-foreground/20" />
         <span className="size-2 rounded-full bg-brand" style={{ animation: "pulse-dot 1.6s ease-in-out infinite" }} />
       </div>
       <Eyebrow className="mt-6">Live YouCam clothes VTO</Eyebrow>
@@ -532,6 +551,13 @@ export function ResultCompare({
   onReset,
   saved,
   onSave,
+  makeupFinish,
+  makeupPlan,
+  makeupUrl,
+  makeupBusy,
+  makeupError,
+  onTryMakeup,
+  errorMessages,
 }: {
   resultUrl: string;
   originalUrl: string;
@@ -541,8 +567,25 @@ export function ResultCompare({
   onReset: () => void;
   saved: boolean;
   onSave: () => void;
+  makeupFinish: boolean;
+  makeupPlan?: MakeupPlan;
+  makeupUrl?: string;
+  makeupBusy?: boolean;
+  makeupError?: string;
+  onTryMakeup: () => void;
+  errorMessages: Record<string, string>;
 }) {
   const [position, setPosition] = useState(50);
+  const [stage, setStage] = useState<"outfit" | "makeup">("outfit");
+  useEffect(() => {
+    if (makeupUrl) setStage("makeup");
+  }, [makeupUrl]);
+  const showingMakeup = Boolean(makeupUrl) && stage === "makeup";
+  const leftSrc = showingMakeup ? resultUrl : originalUrl;
+  const rightSrc = showingMakeup ? makeupUrl || resultUrl : resultUrl;
+  const leftLabel = showingMakeup ? "OUTFIT REHEARSAL" : "ORIGINAL PHOTO";
+  const rightLabel = showingMakeup ? "OUTFIT + MAKEUP" : "VIRTUAL RENDERING";
+
   return (
     <section className="mx-auto max-w-[1100px]">
       <div className="mb-6 flex items-center justify-between gap-4">
@@ -552,10 +595,36 @@ export function ResultCompare({
         </div>
         <span className="grid size-10 place-items-center rounded-full border border-brand text-brand-light">✓</span>
       </div>
+      {makeupUrl && (
+        <div className="mb-4 flex flex-wrap gap-2" role="tablist" aria-label="Compare stage">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={stage === "outfit"}
+            className={`rounded-2xl border px-3.5 py-2.5 text-xs transition-colors ${
+              stage === "outfit" ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground hover:text-foreground"
+            }`}
+            onClick={() => setStage("outfit")}
+          >
+            Outfit
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={stage === "makeup"}
+            className={`rounded-2xl border px-3.5 py-2.5 text-xs transition-colors ${
+              stage === "makeup" ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground hover:text-foreground"
+            }`}
+            onClick={() => setStage("makeup")}
+          >
+            Outfit + makeup
+          </button>
+        </div>
+      )}
       <div className="compare-frame">
-        <img src={resultUrl} alt="Virtual rendering of the selected Wear Plan" />
+        <img src={rightSrc} alt={showingMakeup ? "Virtual makeup on the outfit rehearsal" : "Virtual rendering of the selected Wear Plan"} />
         <div className="compare-original" style={{ width: `${position}%` }}>
-          <img src={originalUrl} alt="Original source photo" />
+          <img src={leftSrc} alt={showingMakeup ? "Outfit rehearsal without makeup" : "Original source photo"} />
         </div>
         <div className="compare-divider" style={{ left: `${position}%` }}>
           <span className="absolute top-1/2 left-1/2 grid size-8 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-foreground text-lg text-primary-foreground">
@@ -563,7 +632,7 @@ export function ResultCompare({
           </span>
         </div>
         <label className="sr-only" htmlFor="compare-slider">
-          Compare original photo and virtual rendering
+          {showingMakeup ? "Compare outfit rehearsal and makeup finish" : "Compare original photo and virtual rendering"}
         </label>
         <input
           id="compare-slider"
@@ -575,14 +644,14 @@ export function ResultCompare({
           onChange={(event) => setPosition(Number(event.target.value))}
         />
         <div className="absolute top-4 left-4 rounded-md border border-border bg-background/80 px-2 py-1.5 font-mono text-[10px] tracking-[0.5px]">
-          ORIGINAL PHOTO
+          {leftLabel}
         </div>
         <div className="absolute top-4 right-4 rounded-md border border-border bg-background/80 px-2 py-1.5 font-mono text-[10px] tracking-[0.5px]">
-          VIRTUAL RENDERING
+          {rightLabel}
         </div>
       </div>
       <p className="mt-3.5 mb-6 text-xs leading-relaxed text-muted-foreground">
-        <strong className="text-foreground">Virtual rendering:</strong> this helps you visualise a look. It does not guarantee physical fit, fabric feel, breathability, or retailer sizing.
+        <strong className="text-foreground">Virtual rendering:</strong> this helps you visualise a look. It does not guarantee physical fit, fabric feel, breathability, retailer sizing, or a product-true makeup match.
       </p>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
@@ -599,6 +668,47 @@ export function ResultCompare({
           <strong>{plan.checkBeforeBuying}</strong>
         </div>
       </div>
+      {makeupPlan && (
+        <div className={`mt-6 rounded-[9px] border p-5 ${makeupFinish ? "border-brand/25 bg-brand/8" : "border-border bg-card"}`}>
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0 flex-1">
+              <Eyebrow>{makeupFinish ? "Makeup finish for this day" : "Optional makeup finish"}</Eyebrow>
+              <h3 className="mt-2 text-xl font-medium tracking-[-0.5px]">{makeupPlan.title}</h3>
+              <p className="mt-1 font-mono text-[10px] tracking-[0.5px] text-muted-foreground">
+                YouCam {makeupPlan.source === "look-vto" ? "Look VTO" : "Makeup VTO"} · {makeupPlan.category}
+              </p>
+              {makeupPlan.reasons.map((reason) => (
+                <p key={reason} className="mt-3 flex gap-2 text-xs leading-snug text-muted-foreground">
+                  <span className="font-extrabold text-brand-light">↗</span>
+                  {reason}
+                </p>
+              ))}
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                {makeupPlan.swatches.map((swatch) => (
+                  <span key={swatch.name} className="flex items-center gap-2 font-mono text-[10px] tracking-[0.4px] text-muted-foreground">
+                    <span className="size-3.5 rounded-full border border-white/20" style={{ background: swatch.hex }} />
+                    {swatch.name} {swatch.hex}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
+              {makeupUrl ? (
+                <p className="text-xs text-brand-light">Finish applied. Use the slider above to compare.</p>
+              ) : (
+                <PrimaryButton disabled={makeupBusy} onClick={onTryMakeup}>
+                  {makeupBusy ? "Applying finish…" : "Try this makeup on me →"}
+                </PrimaryButton>
+              )}
+              {makeupError && (
+                <p className="max-w-[280px] text-xs text-[#ff8b8e]" role="alert">
+                  {errorMessages[makeupError] || errorMessages.UNEXPECTED_ERROR}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       <div className="mt-6 flex flex-col justify-between gap-4 rounded-[9px] border border-brand/25 bg-brand/8 p-5 sm:flex-row sm:items-center">
         <div>
           <Eyebrow>Make a small change</Eyebrow>

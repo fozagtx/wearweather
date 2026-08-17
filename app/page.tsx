@@ -15,12 +15,13 @@ import {
   UploadPanel,
 } from "@/components/rehearsal";
 import { exampleBrief, examplePhotoUrl } from "@/lib/example-brief";
+import { recommendMakeup, type MakeupPlan } from "@/lib/makeup-engine";
 import { rankWearPlans } from "@/lib/recommendation-engine";
 import { preferenceLabels, type PreferenceId, type WearContext, type WearPlan } from "@/lib/types";
 const errorMessages: Record<string, string> = {
   PHOTO_FORMAT_INVALID: "Choose a JPG or PNG image.",
   PHOTO_TOO_LARGE: "This image is larger than 10 MB. Choose a smaller file.",
-  PHOTO_GUIDANCE_NEEDED: "Use one clear, front-facing standing photo with your face and shoulders visible.",
+  PHOTO_GUIDANCE_NEEDED: "Use one clear, front-facing standing photo with your whole face in frame and shoulders visible.",
   REFERENCE_INVALID: "This outfit image is not suitable for try-on. Choose another Wear Plan.",
   TASK_FAILED: "We could not create this visual rehearsal. Your plan is still saved; please try again.",
   SERVICE_UNAVAILABLE: "The try-on service is temporarily unavailable. Add a YouCam key and try again shortly.",
@@ -47,6 +48,12 @@ export default function Home() {
   const [saved, setSaved] = useState(false);
   const [uploadError, setUploadError] = useState<string>();
   const [pollStartedAt, setPollStartedAt] = useState<number>();
+  const [makeupPlan, setMakeupPlan] = useState<MakeupPlan>(() => recommendMakeup(exampleBrief, []));
+  const [makeupUrl, setMakeupUrl] = useState<string>();
+  const [makeupRequestId, setMakeupRequestId] = useState<string>();
+  const [makeupBusy, setMakeupBusy] = useState(false);
+  const [makeupError, setMakeupError] = useState<string>();
+  const [makeupPollStartedAt, setMakeupPollStartedAt] = useState<number>();
 
   const hasSource = mode === "example" || Boolean(sourceFile);
   const originalUrl = mode === "example" ? examplePhotoUrl : sourcePreview || "";
@@ -97,6 +104,10 @@ export default function Home() {
     setTaskError(undefined);
     setSlow(false);
     setResultUrl(undefined);
+    setMakeupUrl(undefined);
+    setMakeupError(undefined);
+    setMakeupBusy(false);
+    setMakeupRequestId(undefined);
     setPollStartedAt(Date.now());
     try {
       let file = sourceFile;
@@ -162,6 +173,109 @@ export default function Home() {
     };
   }, [activeRequestId, screen, pollStartedAt]);
 
+  const sourceAsFile = async () => {
+    if (sourceFile) return sourceFile;
+    const response = await fetch(examplePhotoUrl);
+    const blob = await response.blob();
+    return new File([blob], "example-source.jpg", { type: blob.type || "image/jpeg" });
+  };
+
+  const startMakeup = async () => {
+    if (!selectedPlan || !hasSource || !resultUrl) return;
+    setMakeupBusy(true);
+    setMakeupError(undefined);
+    setMakeupPollStartedAt(Date.now());
+    try {
+      const file = await sourceAsFile();
+      const form = new FormData();
+      form.append("photo", file);
+      form.append("lookId", selectedPlan.lookId);
+      form.append("sourceUrl", resultUrl);
+      form.append("context", JSON.stringify(context));
+      if (makeupPlan?.templateId) form.append("templateId", makeupPlan.templateId);
+      const response = await fetch("/api/makeup", { method: "POST", body: form });
+      const body = await response.json();
+      if (!response.ok) {
+        setMakeupError(body.code || "UNEXPECTED_ERROR");
+        setMakeupBusy(false);
+        return;
+      }
+      if (body.plan) setMakeupPlan(body.plan);
+      setMakeupRequestId(body.requestId);
+    } catch {
+      setMakeupError("SERVICE_UNAVAILABLE");
+      setMakeupBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    if (screen !== "result") return;
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const response = await fetch("/api/makeup-plan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ context }),
+        });
+        const body = await response.json();
+        if (!cancelled && response.ok && body.plan) setMakeupPlan(body.plan);
+      } catch {
+        if (!cancelled) setMakeupPlan(recommendMakeup(context, []));
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [screen, context]);
+
+  useEffect(() => {
+    if (!makeupRequestId || screen !== "result") return;
+    let cancelled = false;
+    const delays = [2000, 3000, 5000];
+    let attempt = 0;
+    const poll = async () => {
+      if (cancelled) return;
+      const started = makeupPollStartedAt || Date.now();
+      if (Date.now() - started >= 60000) {
+        setMakeupError("TASK_FAILED");
+        setMakeupBusy(false);
+        setMakeupRequestId(undefined);
+        return;
+      }
+      try {
+        const response = await fetch(`/api/makeup-status/${makeupRequestId}`, { cache: "no-store" });
+        const body = await response.json();
+        if (cancelled) return;
+        if (body.status === "success") {
+          setMakeupUrl(body.resultUrl);
+          setMakeupBusy(false);
+          setMakeupRequestId(undefined);
+          return;
+        }
+        if (body.status === "error") {
+          setMakeupError(body.code || "TASK_FAILED");
+          setMakeupBusy(false);
+          setMakeupRequestId(undefined);
+          return;
+        }
+      } catch {
+        setMakeupError("SERVICE_UNAVAILABLE");
+        setMakeupBusy(false);
+        setMakeupRequestId(undefined);
+        return;
+      }
+      const delay = delays[Math.min(attempt, delays.length - 1)];
+      attempt += 1;
+      window.setTimeout(poll, delay);
+    };
+    window.setTimeout(poll, delays[0]);
+    return () => {
+      cancelled = true;
+    };
+  }, [makeupRequestId, screen, makeupPollStartedAt]);
+
   const retry = () => {
     setTaskError(undefined);
     startVto();
@@ -183,6 +297,9 @@ export default function Home() {
         ? `You revisited “${preferenceLabels[preference]}”; the same brief is still in view.`
         : `You added “${preferenceLabels[preference]},” so the shortlist moved around that priority.`,
     );
+    setMakeupUrl(undefined);
+    setMakeupError(undefined);
+    setMakeupBusy(false);
     createPlans(nextContext, nextVersion);
   };
 
@@ -199,6 +316,11 @@ export default function Home() {
     setSourcePreview(undefined);
     setActiveRequestId(undefined);
     setResultUrl(undefined);
+    setMakeupPlan(recommendMakeup(exampleBrief, []));
+    setMakeupUrl(undefined);
+    setMakeupRequestId(undefined);
+    setMakeupBusy(false);
+    setMakeupError(undefined);
     setTaskError(undefined);
     setSaved(false);
     setRevisionNote(undefined);
@@ -297,6 +419,13 @@ export default function Home() {
                   onReset={reset}
                   saved={saved}
                   onSave={() => setSaved(true)}
+                  makeupFinish={context.makeupFinish}
+                  makeupPlan={makeupPlan}
+                  makeupUrl={makeupUrl}
+                  makeupBusy={makeupBusy}
+                  makeupError={makeupError}
+                  onTryMakeup={startMakeup}
+                  errorMessages={errorMessages}
                 />
               </>
             )}

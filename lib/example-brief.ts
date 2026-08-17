@@ -7,6 +7,7 @@ export const exampleBrief: WearContext = {
   outdoorDuration: "extended",
   formality: "business_polished",
   preferences: ["runs_warm", "need_movement"],
+  makeupFinish: true,
 };
 
 export const examplePhotoUrl = "/catalog/office-dark.jpg";

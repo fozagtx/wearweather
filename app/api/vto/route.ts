@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { getLookById } from "@/lib/catalogue";
-import { addTaskMapping, readTaskCookie } from "@/lib/task-cookie";
+import { MAX_TASKS, addTaskMapping, taskCount } from "@/lib/task-cookie";
 import { mapYouCamError, createClothesTask } from "@/lib/youcam";
 import { validatePhoto } from "@/lib/validation";
 
@@ -22,8 +22,12 @@ export async function POST(request: Request) {
     const look = getLookById(lookId);
     if (!look) return NextResponse.json({ code: "REFERENCE_INVALID", correlationId }, { status: 400 });
 
-    const existing = await readTaskCookie();
-    if (Object.keys(existing.tasks).length >= 3) return NextResponse.json({ code: "TASK_FAILED", correlationId, message: "This demo session has reached its three-task limit. Reset the session to begin again." }, { status: 429 });
+    if ((await taskCount()) >= MAX_TASKS) {
+      return NextResponse.json(
+        { code: "TASK_FAILED", correlationId, message: "This demo session has reached its task limit. Reset the session to begin again." },
+        { status: 429 },
+      );
+    }
 
     const { providerTaskId } = await createClothesTask({
       sourceFile: photo,
@@ -32,7 +36,7 @@ export async function POST(request: Request) {
       garmentCategory: look.garmentCategory,
     });
     const requestId = `req_${crypto.randomBytes(12).toString("hex")}`;
-    await addTaskMapping(requestId, { providerTaskId, lookId: look.id, createdAt: Date.now() });
+    await addTaskMapping(requestId, { providerTaskId, lookId: look.id, createdAt: Date.now(), kind: "clothes" });
     console.info(JSON.stringify({ event: "vto_requested", correlationId, lookId: look.id }));
     return NextResponse.json({ requestId, status: "running" });
   } catch (error) {

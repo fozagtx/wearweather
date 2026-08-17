@@ -18,7 +18,8 @@ export function isValidContext(value: unknown): value is WearContext {
     typeof context.outdoorDuration === "string" && OUTDOOR_DURATIONS.includes(context.outdoorDuration as WearContext["outdoorDuration"]) &&
     typeof context.formality === "string" && FORMALITY_LEVELS.includes(context.formality as WearContext["formality"]) &&
     Array.isArray(context.preferences) && context.preferences.length >= 1 && context.preferences.length <= 3 &&
-    context.preferences.every((preference) => typeof preference === "string" && PREFERENCES.includes(preference as PreferenceId))
+    context.preferences.every((preference) => typeof preference === "string" && PREFERENCES.includes(preference as PreferenceId)) &&
+    typeof context.makeupFinish === "boolean"
   );
 }
 
