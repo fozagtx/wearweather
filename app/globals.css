@@ -246,12 +246,25 @@ button, a, input, textarea {
   }
 }
 
+@keyframes ww-glow {
+  0%, 100% { opacity: 0.42; transform: scale(0.88); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+
+.ww-glow {
+  background: radial-gradient(circle, rgba(251, 251, 249, 0.28) 0%, rgba(210, 86, 17, 0.42) 32%, rgba(210, 86, 17, 0.08) 58%, transparent 72%);
+  animation: ww-glow 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  will-change: transform, opacity;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .agent-marquee { display: none; }
   .agent-static { display: flex !important; }
   .agent-marquee__track,
-  .caret {
+  .caret,
+  .ww-glow {
     animation: none !important;
   }
+  .ww-glow { opacity: 0.75; }
 }

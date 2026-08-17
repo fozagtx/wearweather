@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CompareCanvas } from "@/components/compare-canvas";
+import { GlowLoad } from "@/components/glow-load";
 import { PHOTO_DRAG_TYPE, PhotoStudio } from "@/components/photo-studio";
 import { GhostButton, PrimaryButton, RetailerLink } from "@/components/ui";
 import type { MakeupPlan } from "@/lib/makeup-engine";
@@ -39,6 +40,8 @@ export type DashboardProps = {
   taskError?: string;
   slow: boolean;
   vtoRunning: boolean;
+  vtoStartedAt?: number;
+  makeupStartedAt?: number;
   onTryOn: () => void;
   onRetry: () => void;
   makeupPlan?: MakeupPlan;
@@ -165,12 +168,8 @@ function TryOnCard(dash: DashboardProps) {
           else if (event.dataTransfer.files?.length) dash.onAddPhotos(event.dataTransfer.files);
         }}
       >
-        {status === "running" && (
-          <div className="p-6 text-center">
-            <p className="text-sm font-medium">Rendering on your photo</p>
-            <p className="mt-2 text-[12px] text-muted-foreground">This can take up to two minutes.</p>
-          </div>
-        )}
+        {status === "running" && <GlowLoad active startedAt={dash.vtoStartedAt} label="RENDERING" />}
+        {status !== "running" && dash.makeupBusy && <GlowLoad active startedAt={dash.makeupStartedAt} label="MAKEUP" />}
         {status === "error" && (
           <div className="p-6 text-center">
             <p className="text-sm font-medium">Needs another take</p>
@@ -180,7 +179,7 @@ function TryOnCard(dash: DashboardProps) {
             </PrimaryButton>
           </div>
         )}
-        {status === "done" && dash.resultUrl && (
+        {status === "done" && dash.resultUrl && !dash.makeupBusy && (
           <CompareCanvas
             leftSrc={leftSrc}
             rightSrc={rightSrc}

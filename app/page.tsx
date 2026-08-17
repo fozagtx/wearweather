@@ -366,6 +366,8 @@ export default function Home() {
             taskError={taskError}
             slow={slow}
             vtoRunning={Boolean(activeRequestId)}
+            vtoStartedAt={pollStartedAt}
+            makeupStartedAt={makeupPollStartedAt}
             onTryOn={() => startVto()}
             onRetry={retry}
             makeupPlan={makeupPlan}
