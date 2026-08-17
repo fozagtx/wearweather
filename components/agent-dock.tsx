@@ -2,6 +2,7 @@
 
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
+import { Plus, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PrimaryButton } from "@/components/ui";
 import type { WearUIMessage } from "@/lib/agent-tools";
@@ -29,6 +30,48 @@ function proposeOutput(part: WearUIMessage["parts"][number]): (ProposeOutput & {
   const output = part.output as ProposeOutput;
   if (!output.plans?.length) return null;
   return { ...output, toolCallId: part.toolCallId };
+}
+
+function messageText(message: WearUIMessage) {
+  return message.parts
+    .filter((part) => part.type === "text" && part.text.trim())
+    .map((part) => (part.type === "text" ? part.text : ""))
+    .join(" ")
+    .trim();
+}
+
+function turnsFrom(messages: WearUIMessage[]) {
+  const turns: { id: string; ask: string; reply: string }[] = [];
+  let pendingAsk = "";
+  let pendingId = "";
+  for (const message of messages) {
+    const text = messageText(message);
+    if (message.role === "user" && text) {
+      if (pendingAsk) turns.push({ id: pendingId, ask: pendingAsk, reply: "" });
+      pendingAsk = text;
+      pendingId = message.id;
+    }
+    if (message.role === "assistant" && pendingAsk) {
+      turns.push({ id: pendingId, ask: pendingAsk, reply: text });
+      pendingAsk = "";
+      pendingId = "";
+    }
+  }
+  if (pendingAsk) turns.push({ id: pendingId, ask: pendingAsk, reply: "" });
+  return turns;
+}
+
+function Dots({ label }: { label?: string }) {
+  return (
+    <span className="inline-flex items-center gap-2" aria-live="polite" aria-busy="true">
+      <span className="stylist-dots" aria-hidden>
+        <span />
+        <span />
+        <span />
+      </span>
+      {label ? <span className="font-mono text-[11px] tracking-[0.12em] text-brand">{label}</span> : null}
+    </span>
+  );
 }
 
 export function AgentDock({
@@ -74,11 +117,11 @@ export function AgentDock({
     "Weekend, cool outside, I run warm.",
   ];
   const [input, setInput] = useState("");
-  const [open, setOpen] = useState(false);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [showPrompts, setShowPrompts] = useState(false);
   const contextRef = useRef(context);
   contextRef.current = context;
   const seen = useRef(new Set<string>());
-  const bottom = useRef<HTMLDivElement>(null);
 
   const transport = useMemo(
     () =>
@@ -92,9 +135,10 @@ export function AgentDock({
   );
 
   const { messages, sendMessage, status, error } = useChat<WearUIMessage>({ transport });
+  const waiting = status === "submitted" || status === "streaming";
+  const turns = turnsFrom(messages);
 
   useEffect(() => {
-    bottom.current?.scrollIntoView({ block: "end" });
     for (const message of messages) {
       if (message.role !== "assistant") continue;
       for (const part of message.parts) {
@@ -104,11 +148,16 @@ export function AgentDock({
         if (!output.plans?.length) continue;
         onContext(output.context);
         onSolutions(output.note, output.plans, output.context, output.makeupPlans, output.hairPlans);
-        setOpen(false);
         onSelectPlan?.(output.plans[0]);
+        setOpenId(null);
       }
     }
   }, [messages, onContext, onSolutions, onSelectPlan]);
+
+  useEffect(() => {
+    const last = turns[turns.length - 1];
+    if (last && !last.reply && waiting) setOpenId(last.id);
+  }, [turns, waiting]);
 
   const pending = solutions.filter((item) => item.status === "open");
   const acceptTarget = pending.find((item) => item.plan.lookId === selectedPlan?.lookId) || pending[0];
@@ -127,128 +176,112 @@ export function AgentDock({
     return "";
   })();
 
+  const ask = (text: string) => {
+    if (!text || waiting) return;
+    setShowPrompts(false);
+    sendMessage({ text });
+    setInput("");
+  };
+
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-      <div className="pointer-events-auto w-full max-w-3xl overflow-hidden rounded-3xl border border-border bg-card shadow-[0_16px_40px_rgba(26,26,20,0.12)]">
-        {(open || messages.length > 0 || errorText) && (
-          <div className="max-h-36 space-y-2 overflow-auto px-4 py-3 text-[13px] leading-relaxed">
-            {open && messages.length === 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {prompts.map((prompt) => (
-                  <button
-                    key={prompt}
-                    type="button"
-                    className="min-h-10 rounded-full border border-border px-3 py-2 text-left text-[11px] leading-snug text-muted-foreground hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    onClick={() => {
-                      if (status === "streaming" || status === "submitted") return;
-                      setOpen(true);
-                      sendMessage({ text: prompt });
-                    }}
-                  >
-                    {prompt}
-                  </button>
-                ))}
-              </div>
-            )}
-            {messages.map((message) => (
-              <div key={message.id}>
-                {message.parts.map((part, index) => {
-                  if (part.type === "text" && part.text.trim()) {
-                    return (
-                      <p key={`${message.id}-${index}`}>
-                        {part.text}
-                      </p>
-                    );
-                  }
-                  if (isProposeTool(part) && part.state !== "output-available") {
-                    return (
-                      <p key={part.toolCallId} className="text-muted-foreground">
-                        Choosing looks…
-                      </p>
-                    );
-                  }
-                  return null;
-                })}
-              </div>
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-sm">
+      <div className="pointer-events-auto mx-auto max-w-[1600px] px-4 sm:px-5">
+        {turns.length === 0 && showPrompts && !waiting && !errorText && (
+          <div className="divide-y divide-border border-b border-border">
+            {prompts.map((prompt) => (
+              <button
+                key={prompt}
+                type="button"
+                className="flex min-h-12 w-full items-center justify-between gap-6 py-3 text-left text-sm tracking-[-0.2px] text-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onClick={() => ask(prompt)}
+              >
+                <span>{prompt}</span>
+                <Plus className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+              </button>
             ))}
-            {errorText && <p className="text-[#c43b3e]">{errorText}</p>}
-            <div ref={bottom} />
           </div>
         )}
+
+        {turns.length > 0 && (
+          <div className="max-h-40 overflow-auto divide-y divide-border border-b border-border">
+            {turns.map((turn) => {
+              const open = openId === turn.id;
+              return (
+                <div key={turn.id}>
+                  <button
+                    type="button"
+                    aria-expanded={open}
+                    className="flex min-h-12 w-full items-center justify-between gap-6 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    onClick={() => setOpenId(open ? null : turn.id)}
+                  >
+                    <span className="text-sm font-medium tracking-[-0.2px] text-foreground">{turn.ask}</span>
+                    <span className="grid size-8 shrink-0 place-items-center text-muted-foreground" aria-hidden>
+                      {open ? <X className="size-4" /> : <Plus className="size-4" />}
+                    </span>
+                  </button>
+                  {open && (
+                    <div className="pb-4">
+                      {turn.reply ? (
+                        <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">{turn.reply}</p>
+                      ) : waiting ? (
+                        <Dots label="LOOKING" />
+                      ) : null}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {errorText && <p className="py-3 text-sm text-[#c43b3e]">{errorText}</p>}
+
         <form
-          className="flex gap-2 p-3"
+          className="flex items-center gap-2 py-3"
           onSubmit={(event) => {
             event.preventDefault();
-            const text = input.trim();
-            if (!text || status === "streaming" || status === "submitted") return;
-            setOpen(false);
-            sendMessage({ text });
-            setInput("");
+            ask(input.trim());
           }}
         >
           <label className="sr-only" htmlFor="stylist-ask">
             Ask what to wear
           </label>
-          <div className="flex min-h-10 min-w-0 flex-1 items-center rounded-xl border border-border bg-background focus-within:ring-2 focus-within:ring-ring">
-            <input
-              id="stylist-ask"
-              value={input}
-              onChange={(event) => setInput(event.target.value)}
-              disabled={status === "streaming" || status === "submitted"}
-              placeholder={
-                acceptTarget
-                  ? acceptTarget.plan.title
-                  : canTryMakeup && makeupTitle
-                    ? makeupTitle
-                    : canTryHair && hairTitle
-                      ? hairTitle
-                      : "What should I wear today?"
-              }
-              className="min-h-10 min-w-0 flex-1 rounded-xl bg-transparent px-3 text-sm outline-none"
-            />
-            {acceptTarget && (
-              <PrimaryButton
-                type="button"
-                className="mr-1 min-h-8 px-3 py-1.5 text-xs"
-                disabled={busy || !canTryOn}
-                onClick={() => {
-                  onSelectPlan?.(acceptTarget.plan);
-                  onAcceptSolution?.(acceptTarget);
-                }}
-              >
-                {!canTryOn ? "Add a photo first" : busy ? "Dressing…" : "Accept"}
-              </PrimaryButton>
-            )}
-            {!acceptTarget && canTryMakeup && (
-              <PrimaryButton
-                type="button"
-                className="mr-1 min-h-8 px-3 py-1.5 text-xs"
-                disabled={makeupBusy}
-                onClick={() => onAcceptMakeup?.()}
-              >
-                {makeupBusy ? "Makeup…" : "Accept"}
-              </PrimaryButton>
-            )}
-            {!acceptTarget && !canTryMakeup && canTryHair && (
-              <PrimaryButton
-                type="button"
-                className="mr-1 min-h-8 px-3 py-1.5 text-xs"
-                disabled={hairBusy}
-                onClick={() => onAcceptHair?.()}
-              >
-                {hairBusy ? "Hair…" : "Accept"}
-              </PrimaryButton>
-            )}
-          </div>
-          <button
-            type="button"
-            className="min-h-10 px-2 text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            onClick={() => setOpen((value) => !value)}
-          >
-            {open ? "Hide" : "Tips"}
-          </button>
-          <PrimaryButton className="min-h-10 px-3 py-2 text-xs" disabled={status === "streaming" || status === "submitted" || !input.trim()} type="submit">
-            {status === "streaming" || status === "submitted" ? "…" : "Ask"}
+          <input
+            id="stylist-ask"
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            disabled={waiting}
+            placeholder="What should I wear today?"
+            onFocus={() => {
+              if (turns.length === 0) setShowPrompts(true);
+            }}
+            className="min-h-11 min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground focus-visible:ring-0"
+          />
+          {acceptTarget && (
+            <PrimaryButton
+              type="button"
+              className="min-h-9 px-3 py-1.5 text-xs"
+              disabled={busy || !canTryOn}
+              onClick={() => {
+                onSelectPlan?.(acceptTarget.plan);
+                onAcceptSolution?.(acceptTarget);
+              }}
+            >
+              {!canTryOn ? "Add a photo first" : busy ? "Dressing…" : "Accept"}
+            </PrimaryButton>
+          )}
+          {!acceptTarget && canTryMakeup && (
+            <PrimaryButton type="button" className="min-h-9 px-3 py-1.5 text-xs" disabled={makeupBusy} onClick={() => onAcceptMakeup?.()}>
+              {makeupBusy ? "Makeup…" : "Accept"}
+            </PrimaryButton>
+          )}
+          {!acceptTarget && !canTryMakeup && canTryHair && (
+            <PrimaryButton type="button" className="min-h-9 px-3 py-1.5 text-xs" disabled={hairBusy} onClick={() => onAcceptHair?.()}>
+              {hairBusy ? "Hair…" : "Accept"}
+            </PrimaryButton>
+          )}
+          <PrimaryButton className="min-h-9 min-w-16 px-3 py-1.5 text-xs" disabled={waiting || !input.trim()} type="submit">
+            {waiting ? <Dots /> : "Ask"}
           </PrimaryButton>
         </form>
       </div>

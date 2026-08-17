@@ -375,7 +375,7 @@ export function CanvasDashboard(dash: DashboardProps) {
 
   return (
     <div className="bg-background lg:h-[calc(100svh-3.5rem)] lg:overflow-hidden">
-      <div className="mx-auto flex h-full max-w-[1600px] flex-col px-4 pt-3 pb-28 sm:px-5">
+      <div className="mx-auto flex h-full max-w-[1600px] flex-col px-4 pt-3 pb-20 sm:px-5">
         <header className="flex shrink-0 justify-end">
           <StepRail photoReady={photoReady} lookReady={lookReady} onYou={onYou} />
         </header>
