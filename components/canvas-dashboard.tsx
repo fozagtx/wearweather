@@ -62,6 +62,7 @@ export type DashboardProps = {
   hairUrl?: string;
   hairBusy?: boolean;
   hairError?: string;
+  hairPhase?: "hair" | "clothes" | "makeup";
   hairStartedAt?: number;
   onTryHair: () => void;
   editUrl?: string;
@@ -337,7 +338,14 @@ function TryOnStage(dash: DashboardProps) {
       >
         {status === "running" && <GlowLoad active className="min-h-0 flex-1" startedAt={dash.vtoStartedAt} label="RENDERING" />}
         {status !== "running" && dash.makeupBusy && <GlowLoad active className="min-h-0 flex-1" startedAt={dash.makeupStartedAt} label="MAKEUP" />}
-        {status !== "running" && !dash.makeupBusy && dash.hairBusy && <GlowLoad active className="min-h-0 flex-1" startedAt={dash.hairStartedAt} label="HAIR" />}
+        {status !== "running" && !dash.makeupBusy && dash.hairBusy && (
+          <GlowLoad
+            active
+            className="min-h-0 flex-1"
+            startedAt={dash.hairStartedAt}
+            label={dash.hairPhase === "clothes" ? "OUTFIT" : dash.hairPhase === "makeup" ? "MAKEUP" : "HAIR"}
+          />
+        )}
         {status !== "running" && !dash.makeupBusy && !dash.hairBusy && dash.editBusy && <GlowLoad active className="min-h-0 flex-1" startedAt={dash.editStartedAt} label="EDIT" />}
         {status === "error" && (
           <div className="grid flex-1 place-items-center p-6">
@@ -388,7 +396,13 @@ function TryOnStage(dash: DashboardProps) {
         )}
         {dash.resultUrl && dash.hairPlan?.templateId && (
           <GhostButton disabled={dash.hairBusy || dash.makeupBusy} onClick={dash.onTryHair}>
-            {dash.hairBusy ? "Applying hair…" : "Try hair"}
+            {dash.hairBusy
+              ? dash.hairPhase === "clothes"
+                ? "Dressing again…"
+                : dash.hairPhase === "makeup"
+                  ? "Makeup again…"
+                  : "Applying hair…"
+              : "Try hair"}
           </GhostButton>
         )}
         {dash.orbitFrames && dash.orbitFrames.length > 1 && (

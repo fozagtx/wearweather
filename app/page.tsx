@@ -6,11 +6,13 @@ import { CanvasDashboard } from "@/components/canvas-dashboard";
 import { LandingPage } from "@/components/landing/landing-page";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { StudioToasts, useStudioToasts } from "@/components/studio-toasts";
 import { exampleBrief, blankBrief, examplePhotoUrl } from "@/lib/example-brief";
 import { preparePhotoFile } from "@/lib/image-prep";
 import { type HairPlan } from "@/lib/hair-engine";
 import { type MakeupPlan } from "@/lib/makeup-engine";
 import { rankWearPlans } from "@/lib/recommendation-engine";
+import { jobFromHairPhase, studioStatus, type StudioJob } from "@/lib/studio-status";
 import { type AgentSolution, type StudioPhoto, type WearContext, type WearPlan } from "@/lib/types";
 const errorMessages: Record<string, string> = {
   PHOTO_FORMAT_INVALID: "Use a JPG, PNG, or WebP image.",
@@ -53,6 +55,8 @@ export default function Home() {
   const [hairBusy, setHairBusy] = useState(false);
   const [hairError, setHairError] = useState<string>();
   const [hairPollStartedAt, setHairPollStartedAt] = useState<number>();
+  const [hairPhase, setHairPhase] = useState<"hair" | "clothes" | "makeup">("hair");
+  const { toasts, show, dismiss, dismissAll } = useStudioToasts();
   const [editUrl, setEditUrl] = useState<string>();
   const [editBeforeUrl, setEditBeforeUrl] = useState<string>();
   const [editBusy, setEditBusy] = useState(false);
@@ -74,6 +78,38 @@ export default function Home() {
   const hasSource = mode === "example" || Boolean(sourceFile);
   const originalUrl = sourcePreview || (mode === "example" ? examplePhotoUrl : "");
   const wornImageUrl = editUrl || hairUrl || makeupUrl || resultUrl;
+
+  const notifyJob = (job: StudioJob, tone: "running" | "done") => {
+    const copy = studioStatus[job];
+    show({
+      id: "job",
+      tone,
+      eyebrow: copy.eyebrow,
+      title: tone === "running" ? copy.runningTitle : copy.doneTitle,
+      detail: tone === "running" ? copy.runningDetail : copy.doneDetail,
+    });
+  };
+
+  const notifyError = (eyebrow: string, code?: string) => {
+    show({
+      id: "job",
+      tone: "error",
+      eyebrow,
+      title: errorMessages[code || ""] || errorMessages.UNEXPECTED_ERROR,
+    });
+  };
+
+  useEffect(() => {
+    if (screen !== "board") {
+      dismissAll();
+      return;
+    }
+    if (activeRequestId) notifyJob("look", "running");
+    else if (makeupBusy) notifyJob("makeup", "running");
+    else if (hairBusy) notifyJob(jobFromHairPhase(hairPhase), "running");
+    else if (editBusy) notifyJob("edit", "running");
+    else if (orbitBusy) notifyJob("orbit", "running");
+  }, [screen, activeRequestId, makeupBusy, hairBusy, hairPhase, editBusy, orbitBusy, dismissAll, show]);
 
   useEffect(() => {
     const ranked = rankWearPlans(context, recommendationVersion, originalUrl ? [originalUrl] : []);
@@ -141,6 +177,7 @@ export default function Home() {
     if (!plan || !hasSource || vtoLock.current) return;
     if (mode === "upload" && !sourceFile) {
       setTaskError("PHOTO_GUIDANCE_NEEDED");
+      notifyError("Look", "PHOTO_GUIDANCE_NEEDED");
       return;
     }
     vtoLock.current = true;
@@ -158,6 +195,7 @@ export default function Home() {
     setHairUrl(undefined);
     setHairError(undefined);
     setHairBusy(false);
+    setHairPhase("hair");
     setHairRequestId(undefined);
     setEditUrl(undefined);
     setEditBeforeUrl(undefined);
@@ -181,11 +219,13 @@ export default function Home() {
       const body = await response.json();
       if (!response.ok) {
         setTaskError(body.code || "UNEXPECTED_ERROR");
+        notifyError("Look", body.code || "UNEXPECTED_ERROR");
         return;
       }
       setActiveRequestId(body.requestId);
     } catch {
       setTaskError("SERVICE_UNAVAILABLE");
+      notifyError("Look", "SERVICE_UNAVAILABLE");
     } finally {
       vtoLock.current = false;
     }
@@ -203,6 +243,7 @@ export default function Home() {
       if (elapsed >= 120000) {
         setTaskError("TASK_FAILED");
         setActiveRequestId(undefined);
+        notifyError("Look", "TASK_FAILED");
         return;
       }
       if (elapsed >= 40000) setSlow(true);
@@ -213,16 +254,19 @@ export default function Home() {
         if (body.status === "success" && body.resultUrl) {
           setResultUrl(body.resultUrl);
           setActiveRequestId(undefined);
+          notifyJob("look", "done");
           return;
         }
         if (body.status === "error") {
           setTaskError(body.code || "TASK_FAILED");
           setActiveRequestId(undefined);
+          notifyError("Look", body.code || "TASK_FAILED");
           return;
         }
       } catch {
         setTaskError("SERVICE_UNAVAILABLE");
         setActiveRequestId(undefined);
+        notifyError("Look", "SERVICE_UNAVAILABLE");
         return;
       }
       const delay = delays[Math.min(attempt, delays.length - 1)];
@@ -258,6 +302,7 @@ export default function Home() {
       if (!response.ok) {
         setMakeupError(body.code || "UNEXPECTED_ERROR");
         setMakeupBusy(false);
+        notifyError("Makeup", body.code || "UNEXPECTED_ERROR");
         return;
       }
       setMakeupRequestId(body.requestId);
@@ -265,6 +310,7 @@ export default function Home() {
       if (makeupGen.current !== gen) return;
       setMakeupError("SERVICE_UNAVAILABLE");
       setMakeupBusy(false);
+      notifyError("Makeup", "SERVICE_UNAVAILABLE");
     }
   };
 
@@ -310,6 +356,7 @@ export default function Home() {
         setMakeupError("TASK_FAILED");
         setMakeupBusy(false);
         setMakeupRequestId(undefined);
+        notifyError("Makeup", "TASK_FAILED");
         return;
       }
       try {
@@ -320,18 +367,21 @@ export default function Home() {
           setMakeupUrl(body.resultUrl);
           setMakeupBusy(false);
           setMakeupRequestId(undefined);
+          notifyJob("makeup", "done");
           return;
         }
         if (body.status === "error") {
           setMakeupError(body.code || "TASK_FAILED");
           setMakeupBusy(false);
           setMakeupRequestId(undefined);
+          notifyError("Makeup", body.code || "TASK_FAILED");
           return;
         }
       } catch {
         setMakeupError("SERVICE_UNAVAILABLE");
         setMakeupBusy(false);
         setMakeupRequestId(undefined);
+        notifyError("Makeup", "SERVICE_UNAVAILABLE");
         return;
       }
       const delay = delays[Math.min(attempt, delays.length - 1)];
@@ -350,6 +400,7 @@ export default function Home() {
     const gen = ++hairGen.current;
     setHairPlan(plan);
     setHairBusy(true);
+    setHairPhase("hair");
     setHairError(undefined);
     setEditUrl(undefined);
     setHairRequestId(undefined);
@@ -373,6 +424,7 @@ export default function Home() {
       if (!response.ok) {
         setHairError(body.code || "UNEXPECTED_ERROR");
         setHairBusy(false);
+        notifyError("Hair", body.code || "UNEXPECTED_ERROR");
         return;
       }
       setHairRequestId(body.requestId);
@@ -380,6 +432,7 @@ export default function Home() {
       if (hairGen.current !== gen) return;
       setHairError("SERVICE_UNAVAILABLE");
       setHairBusy(false);
+      notifyError("Hair", "SERVICE_UNAVAILABLE");
     }
   };
 
@@ -425,28 +478,35 @@ export default function Home() {
         setHairError("TASK_FAILED");
         setHairBusy(false);
         setHairRequestId(undefined);
+        notifyError("Hair", "TASK_FAILED");
         return;
       }
       try {
         const response = await fetch(`/api/hair-status/${hairRequestId}`, { cache: "no-store" });
         const body = await response.json();
         if (cancelled) return;
+        if (body.phase === "hair" || body.phase === "clothes" || body.phase === "makeup") {
+          setHairPhase(body.phase);
+        }
         if (body.status === "success" && body.resultUrl) {
           setHairUrl(body.resultUrl);
           setHairBusy(false);
           setHairRequestId(undefined);
+          notifyJob("hair", "done");
           return;
         }
         if (body.status === "error") {
           setHairError(body.code || "TASK_FAILED");
           setHairBusy(false);
           setHairRequestId(undefined);
+          notifyError("Hair", body.code || "TASK_FAILED");
           return;
         }
       } catch {
         setHairError("SERVICE_UNAVAILABLE");
         setHairBusy(false);
         setHairRequestId(undefined);
+        notifyError("Hair", "SERVICE_UNAVAILABLE");
         return;
       }
       const delay = delays[Math.min(attempt, delays.length - 1)];
@@ -477,14 +537,29 @@ export default function Home() {
         if (orbitGen.current !== gen) return;
         if (!response.ok || !Array.isArray(body.frames) || body.frames.length < 2) {
           setOrbitBusy(false);
+          show({
+            id: "job",
+            tone: "error",
+            eyebrow: "360",
+            title: "The spin did not build",
+            detail: "Compare is still here.",
+          });
           return;
         }
         setOrbitFrames(body.frames);
         setViewMode("spin");
         setOrbitBusy(false);
+        notifyJob("orbit", "done");
       } catch {
         if (orbitGen.current !== gen) return;
         setOrbitBusy(false);
+        show({
+          id: "job",
+          tone: "error",
+          eyebrow: "360",
+          title: "The spin did not build",
+          detail: "Compare is still here.",
+        });
       }
     };
     void load();
@@ -508,11 +583,14 @@ export default function Home() {
       if (!response.ok) {
         setEditError(body.code || "UNEXPECTED_ERROR");
         setEditBusy(false);
+        notifyError("Edit", body.code || "UNEXPECTED_ERROR");
         return;
       }
       setEditUrl(body.resultUrl);
+      notifyJob("edit", "done");
     } catch {
       setEditError("SERVICE_UNAVAILABLE");
+      notifyError("Edit", "SERVICE_UNAVAILABLE");
     } finally {
       setEditBusy(false);
       editLock.current = false;
@@ -548,7 +626,9 @@ export default function Home() {
     setHairUrl(undefined);
     setHairRequestId(undefined);
     setHairBusy(false);
+    setHairPhase("hair");
     setHairError(undefined);
+    dismissAll();
     setEditUrl(undefined);
     setEditBeforeUrl(undefined);
     setEditBusy(false);
@@ -564,6 +644,7 @@ export default function Home() {
   return (
     <>
       <SiteHeader onStart={startExample} showReset={screen !== "start"} onReset={reset} />
+      <StudioToasts toasts={toasts} onDismiss={dismiss} />
       {screen === "start" ? (
         <>
           <main className="flex flex-col bg-background pt-14">
@@ -624,6 +705,7 @@ export default function Home() {
             hairUrl={hairUrl}
             hairBusy={hairBusy}
             hairError={hairError}
+            hairPhase={hairPhase}
             hairStartedAt={hairPollStartedAt}
             onTryHair={startHair}
             editUrl={editUrl}

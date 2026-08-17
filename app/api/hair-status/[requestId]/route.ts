@@ -19,7 +19,7 @@ export async function GET(_request: Request, context: { params: Promise<{ reques
       if (task.status === "error") {
         return NextResponse.json({ status: "error", code: mapYouCamError(new Error(task.providerErrorCode || "TASK_FAILED")) });
       }
-      if (task.status !== "success" || !task.resultUrl) return NextResponse.json({ status: "running" });
+      if (task.status !== "success" || !task.resultUrl) return NextResponse.json({ status: "running", phase: "hair" });
       const look = getLookById(mapping.lookId);
       if (!look) return NextResponse.json({ status: "error", code: "REFERENCE_INVALID" });
       const haired = await fileFromImageUrl(task.resultUrl, "haired.jpg");
@@ -38,7 +38,7 @@ export async function GET(_request: Request, context: { params: Promise<{ reques
         makeupTemplateId: mapping.makeupTemplateId,
       });
       console.info(JSON.stringify({ event: "hair_redress_started", requestId, lookId: mapping.lookId }));
-      return NextResponse.json({ status: "running" });
+      return NextResponse.json({ status: "running", phase: "clothes" });
     }
 
     if (phase === "clothes") {
@@ -46,7 +46,7 @@ export async function GET(_request: Request, context: { params: Promise<{ reques
       if (task.status === "error") {
         return NextResponse.json({ status: "error", code: mapYouCamError(new Error(task.providerErrorCode || "TASK_FAILED")) });
       }
-      if (task.status !== "success" || !task.resultUrl) return NextResponse.json({ status: "running" });
+      if (task.status !== "success" || !task.resultUrl) return NextResponse.json({ status: "running", phase: "clothes" });
       if (mapping.makeupTemplateId) {
         const worn = await fileFromImageUrl(task.resultUrl);
         const makeup = await createLookTask({ sourceFile: worn, templateId: mapping.makeupTemplateId });
@@ -58,7 +58,7 @@ export async function GET(_request: Request, context: { params: Promise<{ reques
           phase: "makeup",
         });
         console.info(JSON.stringify({ event: "hair_makeup_started", requestId, lookId: mapping.lookId }));
-        return NextResponse.json({ status: "running" });
+        return NextResponse.json({ status: "running", phase: "makeup" });
       }
       console.info(JSON.stringify({ event: "hair_completed", requestId, lookId: mapping.lookId }));
       return NextResponse.json({ status: "success", resultUrl: task.resultUrl, lookId: mapping.lookId });
@@ -72,11 +72,11 @@ export async function GET(_request: Request, context: { params: Promise<{ reques
     if (task.status === "error") {
       return NextResponse.json({ status: "error", code: mapYouCamError(new Error(task.providerErrorCode || "TASK_FAILED")) });
     }
-    return NextResponse.json({ status: "running" });
+    return NextResponse.json({ status: "running", phase: "makeup" });
   } catch (error) {
     const code = mapYouCamError(error);
     console.error(JSON.stringify({ event: "hair_status_failed", requestId, code, phase }));
-    if (code === "RATE_LIMITED") return NextResponse.json({ status: "running" });
+    if (code === "RATE_LIMITED") return NextResponse.json({ status: "running", phase });
     return NextResponse.json({ status: "error", code }, { status: code === "SERVICE_UNAVAILABLE" ? 503 : 502 });
   }
 }
