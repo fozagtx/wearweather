@@ -26,7 +26,7 @@ function finishKind(context: WearContext): FinishKind {
   if (/loose|wave|layers|long|blowout|soft/.test(prompt)) return "loose";
   if (/evening|glam|party|set|volume/.test(prompt)) return "set";
   if (context.formality === "formal" || context.wearMoment === "client_meeting") return "slick";
-  if (context.wearMoment === "vacation" || context.wearMoment === "weekend") return "loose";
+  if (context.wearMoment === "vacation" || context.wearMoment === "honeymoon" || context.wearMoment === "weekend") return "loose";
   if (context.temperatureBand === "hot_humid" || context.formality === "smart_casual") return "loose";
   if (context.wearMoment === "long_event") return "set";
   return "slick";

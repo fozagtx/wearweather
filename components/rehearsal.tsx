@@ -197,7 +197,7 @@ export function ContextForm({
         <ChoiceGroup
           label="What are you dressing for?"
           value={context.wearMoment}
-          options={["client_meeting", "presentation", "workday", "long_event", "weekend", "vacation"]}
+          options={["client_meeting", "presentation", "workday", "long_event", "weekend", "vacation", "honeymoon"]}
           labels={contextLabels.wearMoment}
           onChange={(wearMoment) => onChange({ ...context, wearMoment })}
         />

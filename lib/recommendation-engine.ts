@@ -47,22 +47,34 @@ function scoreLook(look: LookCatalogRecord, context: WearContext) {
     }
   }
 
-  const easyDay = context.wearMoment === "vacation" || context.wearMoment === "weekend";
+  const playDays = new Set(["vacation", "honeymoon", "weekend"]);
+  const workDays = new Set(["client_meeting", "presentation", "workday"]);
+  const easyDay = playDays.has(context.wearMoment);
+  const dayLabel = contextLabels.wearMoment[context.wearMoment].toLowerCase();
+  const onOccasion = look.occasions.includes(context.wearMoment);
+  const lookIsPlay = look.occasions.some((occasion) => playDays.has(occasion));
+  const lookIsWork = look.occasions.some((occasion) => workDays.has(occasion));
+
+  if (onOccasion) {
+    score += 10;
+    reasons.push(`On the rack for a ${dayLabel} day.`);
+  } else if (easyDay && lookIsWork && !lookIsPlay) {
+    score -= 12;
+  } else if (workDays.has(context.wearMoment) && lookIsPlay && !lookIsWork) {
+    score -= 10;
+  }
+
   if (look.formality.includes(context.formality)) {
-    score += 4;
+    score += 3;
     reasons.push(`Matches your ${context.formality.replace("_", "-")} setting.`);
   }
-  if (easyDay && look.formality.includes("smart_casual")) {
-    score += 4;
-    reasons.push(`Closest on this rack for a ${contextLabels.wearMoment[context.wearMoment].toLowerCase()} day.`);
-  }
   if (easyDay && (look.silhouette.some((value) => value === "relaxed" || value === "loose") || look.layerWeight === "light")) {
-    score += 3;
+    score += 2;
   }
-  if (easyDay && (look.formality.includes("formal") && !look.formality.includes("smart_casual"))) {
-    score -= 4;
+  if (easyDay && look.formality.includes("formal") && !look.formality.includes("smart_casual") && context.wearMoment !== "honeymoon") {
+    score -= 3;
   }
-  if (easyDay && look.careLevel === "specialist") score -= 2;
+  if (easyDay && look.careLevel === "specialist" && context.wearMoment !== "honeymoon") score -= 2;
   if (context.temperatureBand === "hot_humid" && look.layerWeight === "light") {
     score += 3;
     reasons.push("Uses a lighter layer in your warm-day plan.");

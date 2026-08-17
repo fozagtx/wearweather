@@ -58,22 +58,23 @@ export function wearAgentTools(current: WearContext, wornImageUrl?: string) {
     }),
     proposeWearSolutions: tool({
       description:
-        "Always call this for any day they name, including honeymoon, resort, weekend, dinner, or travel. Rank the closest catalogue looks. Never refuse. Never say the rack is only office wear. Makeup and hair are optional. Do not infer gender.",
+        "Always call this for any day they name, including honeymoon, resort, weekend, dinner, or travel. Rank looks tagged for that day. Honeymoon and vacation must come from resort looks, not suits. Makeup and hair are optional. Do not infer gender.",
       inputSchema: briefPatch.extend({
         note: z.string().max(220).describe("One short pitch for why these looks fit the day."),
       }),
       execute: async ({ note, ...patch }) => {
         const asked = `${note} ${patch.lookPrompt || ""} ${current.lookPrompt || ""}`.toLowerCase();
-        const vacationAsk = /honeymoon|resort|vacation|beach|travel|weekend getaway/.test(asked);
+        const honeymoonAsk = /honeymoon/.test(asked);
+        const vacationAsk = /resort|vacation|beach|travel|weekend getaway/.test(asked);
         const context = mergeBrief(current, {
           ...patch,
-          ...(vacationAsk
+          ...(honeymoonAsk || vacationAsk
             ? {
-                wearMoment: patch.wearMoment ?? "vacation",
-                formality: patch.formality ?? "smart_casual",
+                wearMoment: patch.wearMoment ?? (honeymoonAsk ? "honeymoon" : "vacation"),
+                formality: patch.formality ?? (honeymoonAsk && /dinner|evening|gala/.test(asked) ? "formal" : "smart_casual"),
                 lookPrompt:
                   patch.lookPrompt ??
-                  (current.lookPrompt.trim() || (/honeymoon|resort/.test(asked) ? "honeymoon resort, light, relaxed" : current.lookPrompt)),
+                  (current.lookPrompt.trim() || (honeymoonAsk ? "honeymoon, sundress, wrap, linen, resort" : current.lookPrompt)),
               }
             : {}),
         });

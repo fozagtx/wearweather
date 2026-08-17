@@ -1,4 +1,4 @@
-export const WEAR_MOMENTS = ["client_meeting", "presentation", "workday", "long_event", "weekend", "vacation"] as const;
+export const WEAR_MOMENTS = ["client_meeting", "presentation", "workday", "long_event", "weekend", "vacation", "honeymoon"] as const;
 export const TEMPERATURE_BANDS = ["cool", "mild", "warm", "hot_humid"] as const;
 export const OUTDOOR_DURATIONS = ["minimal", "short", "extended"] as const;
 export const FORMALITY_LEVELS = ["smart_casual", "business_polished", "formal"] as const;
@@ -40,6 +40,7 @@ export type LookCatalogRecord = {
   licenceRecordUrl: string;
   garmentCategory: GarmentCategory;
   formality: Formality[];
+  occasions: WearMoment[];
   silhouette: ("relaxed" | "straight" | "tailored" | "loose")[];
   layerWeight: "light" | "medium" | "heavy";
   removableLayer: boolean;
@@ -91,6 +92,7 @@ export const contextLabels = {
     long_event: "Long event",
     weekend: "Weekend",
     vacation: "Vacation",
+    honeymoon: "Honeymoon",
   },
   temperatureBand: {
     cool: "Cool",
