@@ -166,12 +166,23 @@ button, a, input, textarea {
 .ww-360 {
   --ci360-brand-color: var(--brand);
   --ci360-bg: #ecece4;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.ww-360,
+.ww-360 img,
+.ww-360 canvas {
+  -webkit-user-drag: none;
 }
 
 .ww-360 .cloudimage-360,
-.ww-360 [class*="cloudimage-360"] {
+.ww-360 .cloudimage-360-inner-box,
+.ww-360 canvas {
   height: 100%;
   width: 100%;
+  pointer-events: auto;
 }
 
 .ww-360 img {

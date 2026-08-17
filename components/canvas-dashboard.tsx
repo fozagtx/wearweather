@@ -321,11 +321,13 @@ function TryOnStage(dash: DashboardProps) {
       <div
         className={`flex min-h-64 flex-1 flex-col overflow-hidden rounded-2xl border bg-[#ecece4] lg:min-h-0 ${over ? "border-foreground" : "border-border"}`}
         onDragOver={(event) => {
+          if (dash.viewMode === "spin") return;
           event.preventDefault();
           setOver(true);
         }}
         onDragLeave={() => setOver(false)}
         onDrop={(event) => {
+          if (dash.viewMode === "spin") return;
           event.preventDefault();
           setOver(false);
           const photoId = event.dataTransfer.getData(PHOTO_DRAG_TYPE);
@@ -350,7 +352,7 @@ function TryOnStage(dash: DashboardProps) {
           </div>
         )}
         {status === "done" && dash.resultUrl && !dash.makeupBusy && !dash.hairBusy && !dash.editBusy && dash.viewMode === "spin" && dash.orbitFrames && dash.orbitFrames.length > 1 && (
-          <Look360 frames={dash.orbitFrames} className="h-full min-h-0 w-full" />
+          <Look360 frames={dash.orbitFrames} className="h-full min-h-0 w-full flex-1" />
         )}
         {status === "done" && dash.resultUrl && !dash.makeupBusy && !dash.hairBusy && !dash.editBusy && !(dash.viewMode === "spin" && dash.orbitFrames && dash.orbitFrames.length > 1) && (
           <CompareCanvas
