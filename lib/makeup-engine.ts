@@ -32,6 +32,7 @@ function finishKind(context: WearContext): FinishKind {
   if (/smoky|glam|evening|red lip|bold|berry|night|party/.test(prompt)) return "evening";
   if (/natural|sheer|nude|glass|fresh|soft|no makeup/.test(prompt)) return "sheer";
   if (context.formality === "formal" || context.wearMoment === "long_event") return "evening";
+  if (context.wearMoment === "vacation" || context.wearMoment === "weekend") return "sheer";
   if (context.temperatureBand === "hot_humid" || context.formality === "smart_casual") return "sheer";
   return "meeting";
 }

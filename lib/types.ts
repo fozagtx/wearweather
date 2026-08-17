@@ -1,4 +1,4 @@
-export const WEAR_MOMENTS = ["client_meeting", "presentation", "workday", "long_event"] as const;
+export const WEAR_MOMENTS = ["client_meeting", "presentation", "workday", "long_event", "weekend", "vacation"] as const;
 export const TEMPERATURE_BANDS = ["cool", "mild", "warm", "hot_humid"] as const;
 export const OUTDOOR_DURATIONS = ["minimal", "short", "extended"] as const;
 export const FORMALITY_LEVELS = ["smart_casual", "business_polished", "formal"] as const;
@@ -89,6 +89,8 @@ export const contextLabels = {
     presentation: "Presentation",
     workday: "Workday",
     long_event: "Long event",
+    weekend: "Weekend",
+    vacation: "Vacation",
   },
   temperatureBand: {
     cool: "Cool",
@@ -97,9 +99,9 @@ export const contextLabels = {
     hot_humid: "Hot + humid",
   },
   outdoorDuration: {
-    minimal: "Mostly indoors",
-    short: "A short commute",
-    extended: "An extended commute",
+    minimal: "Mostly inside",
+    short: "Some time outside",
+    extended: "A lot of time outside",
   },
   formality: {
     smart_casual: "Smart casual",

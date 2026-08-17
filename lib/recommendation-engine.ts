@@ -1,4 +1,4 @@
-import type { LookCatalogRecord, PreferenceId, WearContext, WearPlan } from "./types";
+import { contextLabels, type LookCatalogRecord, type PreferenceId, type WearContext, type WearPlan } from "./types";
 import { expandFashionTokens, scoreHaystack } from "./prompt-match";
 
 function hasKnownMovement(look: LookCatalogRecord) {
@@ -46,17 +46,29 @@ function scoreLook(look: LookCatalogRecord, context: WearContext) {
     }
   }
 
+  const easyDay = context.wearMoment === "vacation" || context.wearMoment === "weekend";
   if (look.formality.includes(context.formality)) {
     score += 4;
     reasons.push(`Matches your ${context.formality.replace("_", "-")} setting.`);
   }
+  if (easyDay && look.formality.includes("smart_casual")) {
+    score += 4;
+    reasons.push(`Closest on this rack for a ${contextLabels.wearMoment[context.wearMoment].toLowerCase()} day.`);
+  }
+  if (easyDay && (look.silhouette.some((value) => value === "relaxed" || value === "loose") || look.layerWeight === "light")) {
+    score += 3;
+  }
+  if (easyDay && (look.formality.includes("formal") && !look.formality.includes("smart_casual"))) {
+    score -= 4;
+  }
+  if (easyDay && look.careLevel === "specialist") score -= 2;
   if (context.temperatureBand === "hot_humid" && look.layerWeight === "light") {
     score += 3;
     reasons.push("Uses a lighter layer in your warm-day plan.");
   }
   if (context.temperatureBand === "hot_humid" && look.removableLayer) {
     score += 2;
-    reasons.push("Lets you remove a layer after the commute.");
+    reasons.push(easyDay ? "Lets you drop a layer when you are outside." : "Lets you remove a layer after the commute.");
   }
   if (context.outdoorDuration === "extended" && look.layerWeight === "light") {
     score += 1;

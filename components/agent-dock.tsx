@@ -70,8 +70,8 @@ export function AgentDock({
 }) {
   const prompts = [
     "Client meeting, hot, long commute. What should I wear?",
+    "Honeymoon, hot resort, I want something light.",
     "Weekend, cool outside, I run warm.",
-    "Need coverage and easy movement for a long walk.",
   ];
   const [input, setInput] = useState("");
   const [open, setOpen] = useState(false);

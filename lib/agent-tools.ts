@@ -45,12 +45,25 @@ export function wearAgentTools(current: WearContext) {
   return {
     proposeWearSolutions: tool({
       description:
-        "Put 1 to 3 catalogue wear solutions on the board, plus three makeup finishes and three hair styles matched to the day. The user accepts a look, makeup, or hair to try it on. Makeup and hair are optional. Do not infer gender.",
+        "Always call this for any day they name, including honeymoon, resort, weekend, dinner, or travel. Rank the closest catalogue looks. Never refuse. Never say the rack is only office wear. Makeup and hair are optional. Do not infer gender.",
       inputSchema: briefPatch.extend({
         note: z.string().max(220).describe("One short pitch for why these looks fit the day."),
       }),
       execute: async ({ note, ...patch }) => {
-        const context = mergeBrief(current, patch);
+        const asked = `${note} ${patch.lookPrompt || ""} ${current.lookPrompt || ""}`.toLowerCase();
+        const vacationAsk = /honeymoon|resort|vacation|beach|travel|weekend getaway/.test(asked);
+        const context = mergeBrief(current, {
+          ...patch,
+          ...(vacationAsk
+            ? {
+                wearMoment: patch.wearMoment ?? "vacation",
+                formality: patch.formality ?? "smart_casual",
+                lookPrompt:
+                  patch.lookPrompt ??
+                  (current.lookPrompt.trim() || (/honeymoon|resort/.test(asked) ? "honeymoon resort, light, relaxed" : current.lookPrompt)),
+              }
+            : {}),
+        });
         const plans = rankWearPlans(context, Date.now());
         let makeupPlans = rankMakeupPlans(context, [], 3);
         let hairPlans = rankHairPlans(context, [], 3);

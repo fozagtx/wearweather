@@ -13,6 +13,14 @@ const FASHION_SYNONYMS: Record<string, string[]> = {
   winter: ["coverage", "jacket", "layer"],
   office: ["business", "blazer", "tailored", "shirt"],
   party: ["evening", "column", "bold"],
+  honeymoon: ["light", "sleeveless", "relaxed", "cream", "tan", "loose", "easy"],
+  resort: ["light", "sleeveless", "relaxed", "cream", "tan", "loose"],
+  vacation: ["light", "relaxed", "sleeveless", "easy", "loose"],
+  beach: ["light", "sleeveless", "relaxed", "hot"],
+  linen: ["light", "relaxed", "cream", "tan"],
+  dinner: ["tailored", "column", "evening"],
+  weekend: ["relaxed", "easy", "overshirt", "casual"],
+  travel: ["light", "easy", "relaxed", "movement"],
 };
 
 const MAKEUP_SYNONYMS: Record<string, string[]> = {

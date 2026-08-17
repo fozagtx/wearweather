@@ -6,7 +6,7 @@
     "productUrl": "https://www.everlane.com/collections/womens-blazers",
     "licenceRecordUrl": "https://unsplash.com/license",
     "garmentCategory": "full_body",
-    "formality": ["business_polished", "formal"],
+    "formality": ["smart_casual", "business_polished"],
     "silhouette": ["straight", "tailored"],
     "layerWeight": "light",
     "removableLayer": true,
@@ -14,7 +14,7 @@
     "movementTags": ["relaxed_cut"],
     "coverageTags": ["jacket", "sleeve"],
     "careLevel": "moderate",
-    "composition": "Lightweight blazer layered over a sleeveless base with tailored trousers.",
+    "composition": "Lightweight blazer layered over a sleeveless cream base with tailored trousers.",
     "verifiedFacts": ["Light layer weight", "Removable blazer layer", "Partial lining", "Sleeveless base"],
     "preBuyChecks": ["Check blazer shoulder measurements and the retailer return policy."],
     "active": true
