@@ -5,12 +5,14 @@ import { DefaultChatTransport } from "ai";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PrimaryButton } from "@/components/ui";
 import type { WearUIMessage } from "@/lib/agent-tools";
+import type { MakeupPlan } from "@/lib/makeup-engine";
 import type { AgentSolution, WearContext, WearPlan } from "@/lib/types";
 
 type ProposeOutput = {
   note: string;
   context: WearContext;
   plans: WearPlan[];
+  makeupPlans?: MakeupPlan[];
 };
 
 function isProposeTool(part: WearUIMessage["parts"][number]): part is Extract<
@@ -37,16 +39,24 @@ export function AgentDock({
   onAcceptSolution,
   canTryOn = false,
   busy = false,
+  canTryMakeup = false,
+  makeupBusy = false,
+  makeupTitle,
+  onAcceptMakeup,
 }: {
   context: WearContext;
   onContext: (next: WearContext) => void;
-  onSolutions: (note: string, plans: WearPlan[], nextContext: WearContext) => void;
+  onSolutions: (note: string, plans: WearPlan[], nextContext: WearContext, makeupPlans?: MakeupPlan[]) => void;
   solutions?: AgentSolution[];
   selectedPlan?: WearPlan;
   onSelectPlan?: (plan: WearPlan) => void;
   onAcceptSolution?: (solution: AgentSolution) => void;
   canTryOn?: boolean;
   busy?: boolean;
+  canTryMakeup?: boolean;
+  makeupBusy?: boolean;
+  makeupTitle?: string;
+  onAcceptMakeup?: () => void;
 }) {
   const prompts = [
     "Client meeting, hot, long commute. What should I wear?",
@@ -83,7 +93,7 @@ export function AgentDock({
         seen.current.add(output.toolCallId);
         if (!output.plans?.length) continue;
         onContext(output.context);
-        onSolutions(output.note, output.plans, output.context);
+        onSolutions(output.note, output.plans, output.context, output.makeupPlans);
         setOpen(false);
         onSelectPlan?.(output.plans[0]);
       }
@@ -175,7 +185,9 @@ export function AgentDock({
               value={input}
               onChange={(event) => setInput(event.target.value)}
               disabled={status === "streaming" || status === "submitted"}
-              placeholder={acceptTarget ? acceptTarget.plan.title : "What should I wear today?"}
+              placeholder={
+                acceptTarget ? acceptTarget.plan.title : canTryMakeup && makeupTitle ? makeupTitle : "What should I wear today?"
+              }
               className="min-h-10 min-w-0 flex-1 rounded-xl bg-transparent px-3 text-sm outline-none"
             />
             {acceptTarget && (
@@ -189,6 +201,16 @@ export function AgentDock({
                 }}
               >
                 {!canTryOn ? "Add a photo first" : busy ? "Dressing…" : "Accept"}
+              </PrimaryButton>
+            )}
+            {!acceptTarget && canTryMakeup && (
+              <PrimaryButton
+                type="button"
+                className="mr-1 min-h-8 px-3 py-1.5 text-xs"
+                disabled={makeupBusy}
+                onClick={() => onAcceptMakeup?.()}
+              >
+                {makeupBusy ? "Makeup…" : "Accept"}
               </PrimaryButton>
             )}
           </div>

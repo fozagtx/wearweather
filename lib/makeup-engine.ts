@@ -58,8 +58,7 @@ function skin(strength: number, colorIntensity: number): MakeupEffect {
   return { category: "skin_smooth", skinSmoothStrength: strength, skinSmoothColorIntensity: colorIntensity };
 }
 
-function profile(context: WearContext) {
-  const kind = finishKind(context);
+function profileFor(kind: FinishKind, context: WearContext) {
   const moment = contextLabels.wearMoment[context.wearMoment].toLowerCase();
   const polish = contextLabels.formality[context.formality].toLowerCase();
   const weather = contextLabels.temperatureBand[context.temperatureBand].toLowerCase();
@@ -127,32 +126,43 @@ function scoreTemplate(template: LookTemplate, keywords: string[], context: Wear
   return score;
 }
 
-export function recommendMakeup(context: WearContext, templates: LookTemplate[]): MakeupPlan {
-  const chosen = profile(context);
-  const promptTokens = expandMakeupTokens(context.makeupPrompt || "");
-  const ranked = [...templates]
-    .map((template) => {
-      const hay = `${template.title} ${template.category_name} ${template.id}`;
-      const promptScore = scoreHaystack(hay, promptTokens);
-      return { template, score: scoreTemplate(template, chosen.keywords, context) + promptScore };
-    })
-    .sort((a, b) => b.score - a.score || a.template.id.localeCompare(b.template.id));
-
-  const bestMatch = ranked[0]?.template;
-  const fallback = templates.find((template) => template.id === FALLBACK_TEMPLATE_ID);
-  const selected = bestMatch || fallback || templates[0];
-  const promptNote = context.makeupPrompt.trim()
-    ? [`Your makeup note: “${context.makeupPrompt.trim()}”.`]
-    : [];
-
+function buildPlan(context: WearContext, kind: FinishKind, template?: LookTemplate): MakeupPlan {
+  const chosen = profileFor(kind, context);
+  const promptNote = context.makeupPrompt.trim() ? [`Your makeup note: "${context.makeupPrompt.trim()}".`] : [];
   return {
-    title: selected?.title || chosen.title,
-    templateId: selected?.id || FALLBACK_TEMPLATE_ID,
-    category: selected?.category_name || chosen.category,
-    thumb: selected?.thumb,
+    title: template?.title || chosen.title,
+    templateId: template?.id || FALLBACK_TEMPLATE_ID,
+    category: template?.category_name || chosen.category,
+    thumb: template?.thumb,
     reasons: [...promptNote, ...chosen.reasons].slice(0, 3),
     effects: chosen.effects,
     swatches: chosen.swatches,
-    source: selected ? "look-vto" : "makeup-vto-fallback",
+    source: template ? "look-vto" : "makeup-vto-fallback",
   };
+}
+
+export function rankMakeupPlans(context: WearContext, templates: LookTemplate[], count = 3): MakeupPlan[] {
+  const promptTokens = expandMakeupTokens(context.makeupPrompt || "");
+  const kinds = ([finishKind(context), "meeting", "sheer", "evening"] as FinishKind[]).filter(
+    (kind, index, list) => list.indexOf(kind) === index,
+  );
+  const used = new Set<string>();
+
+  return kinds.slice(0, count).map((kind) => {
+    const chosen = profileFor(kind, context);
+    const ranked = [...templates]
+      .filter((template) => !used.has(template.id))
+      .map((template) => {
+        const hay = `${template.title} ${template.category_name} ${template.id}`;
+        return { template, score: scoreTemplate(template, chosen.keywords, context) + scoreHaystack(hay, promptTokens) };
+      })
+      .sort((a, b) => b.score - a.score || a.template.id.localeCompare(b.template.id));
+    const selected = ranked[0]?.template;
+    if (selected) used.add(selected.id);
+    return buildPlan(context, kind, selected);
+  });
+}
+
+export function recommendMakeup(context: WearContext, templates: LookTemplate[]): MakeupPlan {
+  return rankMakeupPlans(context, templates, 1)[0] || buildPlan(context, finishKind(context));
 }

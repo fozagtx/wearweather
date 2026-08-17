@@ -8,7 +8,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { exampleBrief, blankBrief, examplePhotoUrl } from "@/lib/example-brief";
 import { preparePhotoFile } from "@/lib/image-prep";
-import { recommendMakeup, type MakeupPlan } from "@/lib/makeup-engine";
+import { rankMakeupPlans, recommendMakeup, type MakeupPlan } from "@/lib/makeup-engine";
 import { rankWearPlans } from "@/lib/recommendation-engine";
 import { type AgentSolution, type StudioPhoto, type WearContext, type WearPlan } from "@/lib/types";
 const errorMessages: Record<string, string> = {
@@ -38,6 +38,7 @@ export default function Home() {
   const [recommendationVersion, setRecommendationVersion] = useState(1);
   const [uploadError, setUploadError] = useState<string>();
   const [pollStartedAt, setPollStartedAt] = useState<number>();
+  const [makeupPlans, setMakeupPlans] = useState<MakeupPlan[]>(() => rankMakeupPlans(exampleBrief, [], 3));
   const [makeupPlan, setMakeupPlan] = useState<MakeupPlan>(() => recommendMakeup(exampleBrief, []));
   const [makeupUrl, setMakeupUrl] = useState<string>();
   const [makeupRequestId, setMakeupRequestId] = useState<string>();
@@ -239,7 +240,7 @@ export default function Home() {
   };
 
   useEffect(() => {
-    if (!resultUrl || screen !== "board") return;
+    if (screen !== "board") return;
     let cancelled = false;
     const load = async () => {
       try {
@@ -249,16 +250,26 @@ export default function Home() {
           body: JSON.stringify({ context }),
         });
         const body = await response.json();
-        if (!cancelled && response.ok && body.plan) setMakeupPlan(body.plan);
+        if (cancelled || !response.ok) return;
+        const next: MakeupPlan[] = Array.isArray(body.plans) && body.plans.length
+          ? body.plans
+          : body.plan
+            ? [body.plan]
+            : rankMakeupPlans(context, [], 3);
+        setMakeupPlans(next);
+        setMakeupPlan((current) => next.find((plan) => plan.templateId === current?.templateId && plan.title === current?.title) || next[0]);
       } catch {
-        if (!cancelled) setMakeupPlan(recommendMakeup(context, []));
+        if (cancelled) return;
+        const next = rankMakeupPlans(context, [], 3);
+        setMakeupPlans(next);
+        setMakeupPlan((current) => next.find((plan) => plan.templateId === current?.templateId && plan.title === current?.title) || next[0]);
       }
     };
     load();
     return () => {
       cancelled = true;
     };
-  }, [screen, context, resultUrl]);
+  }, [screen, context]);
 
   useEffect(() => {
     if (!makeupRequestId) return;
@@ -325,6 +336,7 @@ export default function Home() {
     setSelectedPhotoId(undefined);
     setActiveRequestId(undefined);
     setResultUrl(undefined);
+    setMakeupPlans(rankMakeupPlans(exampleBrief, [], 3));
     setMakeupPlan(recommendMakeup(exampleBrief, []));
     setMakeupUrl(undefined);
     setMakeupRequestId(undefined);
@@ -371,6 +383,13 @@ export default function Home() {
             onTryOn={() => startVto()}
             onRetry={retry}
             makeupPlan={makeupPlan}
+            makeupPlans={makeupPlans}
+            onSelectMakeup={(plan) => {
+              setMakeupPlan(plan);
+              setMakeupUrl(undefined);
+              setMakeupError(undefined);
+              setContext((current) => ({ ...current, makeupFinish: true }));
+            }}
             makeupUrl={makeupUrl}
             makeupBusy={makeupBusy}
             makeupError={makeupError}
@@ -397,6 +416,10 @@ export default function Home() {
             onSelectPlan={setSelectedPlan}
             canTryOn={hasSource}
             busy={Boolean(activeRequestId)}
+            canTryMakeup={Boolean(resultUrl && makeupPlan && !makeupUrl && !makeupBusy)}
+            makeupBusy={makeupBusy}
+            makeupTitle={makeupPlan?.title}
+            onAcceptMakeup={() => void startMakeup()}
             onAcceptSolution={(solution) => {
               setSolutions((current) =>
                 current.map((item) =>
@@ -405,8 +428,12 @@ export default function Home() {
               );
               void startVto(solution.plan);
             }}
-            onSolutions={(note, nextPlans) => {
+            onSolutions={(note, nextPlans, _nextContext, nextMakeup) => {
               setSolutions(solutionsFromPlans(note, nextPlans));
+              if (nextMakeup?.length) {
+                setMakeupPlans(nextMakeup);
+                setMakeupPlan(nextMakeup[0]);
+              }
             }}
           />
         </main>

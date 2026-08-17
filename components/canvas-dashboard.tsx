@@ -45,6 +45,8 @@ export type DashboardProps = {
   onTryOn: () => void;
   onRetry: () => void;
   makeupPlan?: MakeupPlan;
+  makeupPlans?: MakeupPlan[];
+  onSelectMakeup?: (plan: MakeupPlan) => void;
   makeupUrl?: string;
   makeupBusy?: boolean;
   makeupError?: string;
@@ -148,7 +150,7 @@ function LookPicker({
   onSelectPlan: (plan: WearPlan) => void;
 }) {
   return (
-    <section id="step-look" className="flex min-h-0 flex-col">
+    <section id="step-look" className="flex min-h-0 flex-1 flex-col">
       <div className="grid min-h-0 flex-1 grid-cols-3 gap-2">
         {plans.map((plan) => {
           const active = selectedPlan?.lookId === plan.lookId;
@@ -179,6 +181,47 @@ function LookPicker({
         </div>
       )}
     </section>
+  );
+}
+
+function MakeupPicker({
+  plans,
+  selected,
+  onSelect,
+}: {
+  plans: MakeupPlan[];
+  selected?: MakeupPlan;
+  onSelect: (plan: MakeupPlan) => void;
+}) {
+  if (!plans.length) return null;
+  return (
+    <div className="mt-3 grid shrink-0 grid-cols-3 gap-2">
+      {plans.map((plan, index) => {
+        const active = selected?.templateId === plan.templateId && selected.title === plan.title;
+        return (
+          <button
+            key={`${plan.templateId}-${plan.title}-${index}`}
+            type="button"
+            onClick={() => onSelect(plan)}
+            className={`rounded-2xl border bg-card p-2 text-left ${chipFocus} ${
+              active ? "border-foreground/40 ring-2 ring-foreground/15" : "border-border hover:border-foreground/25"
+            }`}
+            aria-pressed={active}
+          >
+            {plan.thumb ? (
+              <img src={plan.thumb} alt="" className="mx-auto block h-20 w-full object-contain object-top" />
+            ) : (
+              <div className="flex h-20 items-end justify-center gap-1 bg-[#ecece4] pb-3">
+                {plan.swatches.map((swatch) => (
+                  <span key={swatch.name} className="size-5 rounded-full border border-border" style={{ background: swatch.hex }} />
+                ))}
+              </div>
+            )}
+            <p className="mt-2 text-sm font-medium leading-snug">{plan.title}</p>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -248,9 +291,9 @@ function TryOnStage(dash: DashboardProps) {
                 ? `Try on`
                 : "Pick a look first"}
         </PrimaryButton>
-        {dash.resultUrl && (dash.context.makeupFinish || dash.context.makeupPrompt.trim()) && (
+        {dash.resultUrl && dash.makeupPlan && (
           <GhostButton disabled={dash.makeupBusy} onClick={dash.onTryMakeup}>
-            {dash.makeupBusy ? "Applying makeup…" : "Try makeup on me"}
+            {dash.makeupBusy ? "Applying makeup…" : "Try makeup"}
           </GhostButton>
         )}
       </div>
@@ -383,7 +426,10 @@ export function CanvasDashboard(dash: DashboardProps) {
             </section>
           </aside>
 
-          <LookPicker plans={dash.plans} selectedPlan={dash.selectedPlan} onSelectPlan={dash.onSelectPlan} />
+          <div className="flex min-h-0 flex-1 flex-col">
+            <LookPicker plans={dash.plans} selectedPlan={dash.selectedPlan} onSelectPlan={dash.onSelectPlan} />
+            <MakeupPicker plans={dash.makeupPlans || []} selected={dash.makeupPlan} onSelect={(plan) => dash.onSelectMakeup?.(plan)} />
+          </div>
           <TryOnStage {...dash} />
         </div>
       </div>

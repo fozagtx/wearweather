@@ -1,5 +1,6 @@
 import { tool, type InferUITools, type UIMessage } from "ai";
 import { z } from "zod";
+import { rankMakeupPlans } from "@/lib/makeup-engine";
 import { rankWearPlans } from "@/lib/recommendation-engine";
 import {
   FORMALITY_LEVELS,
@@ -10,6 +11,7 @@ import {
   type PreferenceId,
   type WearContext,
 } from "@/lib/types";
+import { listLookTemplates } from "@/lib/youcam";
 
 const briefPatch = z.object({
   wearMoment: z.enum(WEAR_MOMENTS).optional(),
@@ -40,14 +42,20 @@ export function wearAgentTools(current: WearContext) {
   return {
     proposeWearSolutions: tool({
       description:
-        "Put 1 to 3 catalogue wear solutions on the board as cards. Call this when you can recommend what they should wear. The user can accept a card to run virtual try-on.",
+        "Put 1 to 3 catalogue wear solutions on the board, plus three day-matched makeup finishes. Call this when you can recommend what they should wear. The user accepts a look or a makeup finish to try it on. Makeup is optional. Do not infer gender.",
       inputSchema: briefPatch.extend({
         note: z.string().max(220).describe("One short pitch for why these looks fit the day."),
       }),
       execute: async ({ note, ...patch }) => {
         const context = mergeBrief(current, patch);
         const plans = rankWearPlans(context, Date.now());
-        return { note, context, plans };
+        let makeupPlans = rankMakeupPlans(context, [], 3);
+        try {
+          makeupPlans = rankMakeupPlans(context, await listLookTemplates(), 3);
+        } catch {
+          makeupPlans = rankMakeupPlans(context, [], 3);
+        }
+        return { note, context, plans, makeupPlans };
       },
     }),
   };
