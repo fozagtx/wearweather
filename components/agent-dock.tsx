@@ -71,7 +71,19 @@ export function AgentDock({
     }
   }, [messages, onContext, onSolutions]);
 
-  const offline = error?.message?.includes("STYLIST_OFFLINE") || error?.message?.includes("503");
+  const errorText = (() => {
+    const message = error?.message || "";
+    if (/STYLIST_KEY_INVALID|authentication|api key/i.test(message)) {
+      return "DeepSeek rejected the API key. Add a key from platform.deepseek.com. It starts with sk-.";
+    }
+    if (/internet|failed to fetch|network|disconnected|offline/i.test(message)) {
+      return "No network right now. Reconnect and ask again.";
+    }
+    if (message.includes("STYLIST_FAILED") || error) {
+      return "Could not reach the stylist. Try again.";
+    }
+    return "";
+  })();
 
   return (
     <div className="pointer-events-none absolute right-4 bottom-4 z-20 w-[min(100%-2rem,340px)]">
@@ -117,7 +129,7 @@ export function AgentDock({
                   })}
                 </div>
               ))}
-              {error && <p className="text-[#c43b3e]">{offline ? "Stylist is offline. Set DEEPSEEK_API_KEY on the server." : "Could not reach the stylist. Try again."}</p>}
+              {errorText && <p className="text-[#c43b3e]">{errorText}</p>}
               <div ref={bottom} />
             </div>
             <form

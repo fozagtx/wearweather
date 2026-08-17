@@ -73,9 +73,20 @@ export async function POST(req: Request) {
     providerOptions: {
       deepseek: { thinking: { type: "disabled" } },
     },
+    onError: ({ error }) => {
+      console.error("stylist", error);
+    },
   });
 
   return createUIMessageStreamResponse({
-    stream: toUIMessageStream({ stream: result.stream, tools }),
+    stream: toUIMessageStream({
+      stream: result.stream,
+      tools,
+      onError: (error) => {
+        const message = error instanceof Error ? error.message : String(error);
+        if (/authentication|api key|401/i.test(message)) return "STYLIST_KEY_INVALID";
+        return "STYLIST_FAILED";
+      },
+    }),
   });
 }
