@@ -86,8 +86,8 @@ export function AgentDock({
   })();
 
   return (
-    <div className="pointer-events-none absolute right-4 bottom-4 z-20 w-[min(100%-2rem,340px)]">
-      <div className="pointer-events-auto overflow-hidden rounded-2xl border border-border bg-card shadow-[0_12px_32px_rgba(26,26,20,0.08)]">
+    <div className="pointer-events-none fixed inset-x-0 bottom-5 z-30 flex justify-center px-4">
+      <div className="pointer-events-auto w-full max-w-xl overflow-hidden rounded-3xl border border-border bg-card shadow-[0_16px_40px_rgba(26,26,20,0.12)]">
         <button
           type="button"
           className="flex w-full items-center justify-between px-4 py-3 text-left"
@@ -103,7 +103,7 @@ export function AgentDock({
           <div className="border-t border-border">
             <div className="max-h-48 space-y-2 overflow-auto px-4 py-3 text-[13px] leading-relaxed">
               {messages.length === 0 && (
-                <p className="text-muted-foreground">Tell the day. Solutions land on the canvas. Accept one to try it on.</p>
+                <p className="text-muted-foreground">Tell the day. Looks land as cards. Accept one to try it on.</p>
               )}
               {messages.map((message) => (
                 <div key={message.id}>
@@ -121,7 +121,7 @@ export function AgentDock({
                     if (isProposeTool(part)) {
                       return (
                         <p key={part.toolCallId} className="mt-0.5 text-muted-foreground">
-                          {part.state === "output-available" ? "Looks are on the canvas." : "Choosing looks…"}
+                          {part.state === "output-available" ? "Looks are on the board." : "Choosing looks…"}
                         </p>
                       );
                     }
@@ -146,7 +146,7 @@ export function AgentDock({
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
                 disabled={status === "streaming" || status === "submitted"}
-                placeholder="Client meeting, hot out, I run warm…"
+                placeholder="What should I wear today?"
                 className="min-h-10 min-w-0 flex-1 rounded-xl border border-border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
               <PrimaryButton className="min-h-10 px-3 py-2 text-xs" disabled={status === "streaming" || status === "submitted" || !input.trim()} type="submit">

@@ -194,10 +194,10 @@ export function LandingPage({
               Start rehearsing the day.
             </h1>
             <p className="mt-4 max-w-md text-base leading-relaxed text-muted-foreground">
-              Open a canvas dashboard: photos, fashion/makeup notes, three plans, and live try-on stay on one board. Drag empty space to pan. Scroll the board to zoom.
+              Rank three looks for the day you actually have, then try one on a photo before you buy.
             </p>
             <div className="mt-5 flex flex-wrap gap-3">
-              <PrimaryButton onClick={onExample}>Open the canvas</PrimaryButton>
+              <PrimaryButton onClick={onExample}>Open the studio</PrimaryButton>
               <GhostButton onClick={onUpload}>Use my photos</GhostButton>
             </div>
           </div>

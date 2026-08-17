@@ -40,7 +40,7 @@ export function wearAgentTools(current: WearContext) {
   return {
     proposeWearSolutions: tool({
       description:
-        "Put 1 to 3 catalogue wear solutions on the user's canvas. Call this when you can recommend what they should wear. The user can accept a card to run virtual try-on.",
+        "Put 1 to 3 catalogue wear solutions on the board as cards. Call this when you can recommend what they should wear. The user can accept a card to run virtual try-on.",
       inputSchema: briefPatch.extend({
         note: z.string().max(220).describe("One short pitch for why these looks fit the day."),
       }),

@@ -73,7 +73,7 @@ export function PhotoStudio({
                     aria-pressed={active}
                     aria-label={active ? `${photo.label}, try-on source` : `Use ${photo.label}`}
                   >
-                    <img src={photo.url} alt="" className="block h-auto w-full object-contain object-top" draggable={false} />
+                    <img src={photo.url} alt="" className="block h-auto max-h-64 w-full object-contain object-top" draggable={false} />
                     {active && (
                       <span className="absolute top-2 left-2 rounded-md bg-background/90 px-1.5 py-0.5 font-mono text-[9px] tracking-[0.12em]">
                         IN USE
@@ -100,7 +100,7 @@ export function PhotoStudio({
           <div>
             {examplePhotoUrl && (
               <div className="relative">
-                <img src={examplePhotoUrl} alt="Example try-on photo" className="block h-auto w-full rounded-lg object-contain object-top" />
+                <img src={examplePhotoUrl} alt="Example try-on photo" className="block h-auto max-h-64 w-full rounded-lg object-contain object-top" />
                 <span className="absolute top-2 left-2 rounded-md bg-background/90 px-1.5 py-0.5 font-mono text-[9px] tracking-[0.12em]">
                   EXAMPLE IN USE
                 </span>

@@ -346,7 +346,7 @@ export default function Home() {
           <SiteFooter />
         </>
       ) : (
-        <main className="relative bg-background pt-14">
+        <main className="bg-background pt-14">
           <CanvasDashboard
             mode={mode}
             context={context}

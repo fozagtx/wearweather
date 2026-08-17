@@ -10,9 +10,9 @@ The picture is a rehearsal, not a promise. It does not guarantee fit, fabric fee
 
 ## What it does
 
-1. You describe the day: what you’re dressing for, how it feels outside, how long you’ll be outdoors, and how polished you need to look. You can type that to the canvas stylist instead of filling the brief by hand.
+1. You describe the day: what you’re dressing for, how it feels outside, how long you’ll be outdoors, and how polished you need to look. You can type that to the stylist instead of filling the brief by hand.
 2. You pick up to three priorities in your own words: I run warm, I need easy movement, I prefer coverage.
-3. You get three Wear Plans, plus stylist cards on the canvas when you ask. Accept a card to try that look on.
+3. You get three Wear Plans, plus stylist cards when you ask. Accept a card to try that look on.
 4. You try one look on a photo (an example, or your own).
 5. If you opt in, you get a makeup recommendation for that same day, and you can try it on the outfit rehearsal.
 
@@ -48,7 +48,7 @@ WearWeather does not guess your gender from the photo. Makeup is opt-in. It does
 | --- | --- |
 | Catalogue | Labeled looks. Unknown facts never become a plus. |
 | Ranking | Runs in the browser against the brief. |
-| Stylist | DeepSeek V4 on the canvas. It ranks the same catalogue and drops Accept cards. |
+| Stylist | DeepSeek V4. It ranks the same catalogue and drops Accept cards. |
 | Clothes try-on | YouCam puts the chosen look on the photo. |
 | Makeup | YouCam Look templates first, custom makeup if that fails. |
 | Photo | Stays in the browser until you start try-on. No account. |
@@ -65,7 +65,7 @@ cp .env.example .env.local
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Ranking works immediately. Putting the look on a photo needs `YOUCAM_API_KEY`. The canvas stylist needs `DEEPSEEK_API_KEY` (DeepSeek V4). Optional: `DEEPSEEK_MODEL=deepseek-v4-flash` or `deepseek-v4-pro`.
+Open [http://localhost:3000](http://localhost:3000). Ranking works immediately. Putting the look on a photo needs `YOUCAM_API_KEY`. The stylist needs `DEEPSEEK_API_KEY` (DeepSeek V4). Optional: `DEEPSEEK_MODEL=deepseek-v4-flash` or `deepseek-v4-pro`.
 
 **Try the example brief** uses a seeded client-meeting day (hot and humid, long commute, business polished). **Use my photo** keeps the file in the browser until you choose to try a look on.
 
