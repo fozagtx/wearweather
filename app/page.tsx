@@ -27,7 +27,7 @@ export default function Home() {
   const [screen, setScreen] = useState<"start" | "board">("start");
   const [mode, setMode] = useState<"example" | "upload">("example");
   const [context, setContext] = useState<WearContext>(exampleBrief);
-  const [plans, setPlans] = useState<WearPlan[]>(() => rankWearPlans(exampleBrief, 1));
+  const [plans, setPlans] = useState<WearPlan[]>(() => rankWearPlans(exampleBrief, 1, [examplePhotoUrl]));
   const [selectedPlan, setSelectedPlan] = useState<WearPlan>();
   const [photos, setPhotos] = useState<StudioPhoto[]>([]);
   const [selectedPhotoId, setSelectedPhotoId] = useState<string>();
@@ -56,10 +56,10 @@ export default function Home() {
   const originalUrl = sourcePreview || (mode === "example" ? examplePhotoUrl : "");
 
   useEffect(() => {
-    const ranked = rankWearPlans(context, recommendationVersion);
+    const ranked = rankWearPlans(context, recommendationVersion, originalUrl ? [originalUrl] : []);
     setPlans(ranked);
     setSelectedPlan((current) => ranked.find((plan) => plan.lookId === current?.lookId) || ranked[0]);
-  }, [context, recommendationVersion]);
+  }, [context, recommendationVersion, originalUrl]);
 
   const startExample = () => {
     setMode("example");

@@ -147,18 +147,22 @@ export function rankMakeupPlans(context: WearContext, templates: LookTemplate[],
     (kind, index, list) => list.indexOf(kind) === index,
   );
   const used = new Set<string>();
+  const usedThumbs = new Set<string>();
 
   return kinds.slice(0, count).map((kind) => {
     const chosen = profileFor(kind, context);
     const ranked = [...templates]
-      .filter((template) => !used.has(template.id))
+      .filter((template) => !used.has(template.id) && (!template.thumb || !usedThumbs.has(template.thumb)))
       .map((template) => {
         const hay = `${template.title} ${template.category_name} ${template.id}`;
         return { template, score: scoreTemplate(template, chosen.keywords, context) + scoreHaystack(hay, promptTokens) };
       })
       .sort((a, b) => b.score - a.score || a.template.id.localeCompare(b.template.id));
     const selected = ranked[0]?.template;
-    if (selected) used.add(selected.id);
+    if (selected) {
+      used.add(selected.id);
+      if (selected.thumb) usedThumbs.add(selected.thumb);
+    }
     return buildPlan(context, kind, selected);
   });
 }

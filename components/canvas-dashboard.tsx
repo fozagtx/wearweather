@@ -194,10 +194,13 @@ function MakeupPicker({
   onSelect: (plan: MakeupPlan) => void;
 }) {
   if (!plans.length) return null;
+  const seenThumbs = new Set<string>();
   return (
     <div className="mt-3 grid shrink-0 grid-cols-3 gap-2">
       {plans.map((plan, index) => {
         const active = selected?.templateId === plan.templateId && selected.title === plan.title;
+        const thumb = plan.thumb && !seenThumbs.has(plan.thumb) ? plan.thumb : undefined;
+        if (plan.thumb) seenThumbs.add(plan.thumb);
         return (
           <button
             key={`${plan.templateId}-${plan.title}-${index}`}
@@ -208,8 +211,8 @@ function MakeupPicker({
             }`}
             aria-pressed={active}
           >
-            {plan.thumb ? (
-              <img src={plan.thumb} alt="" className="mx-auto block h-20 w-full object-contain object-top" />
+            {thumb ? (
+              <img src={thumb} alt="" className="mx-auto block h-20 w-full object-contain object-top" />
             ) : (
               <div className="flex h-20 items-end justify-center gap-1 bg-[#ecece4] pb-3">
                 {plan.swatches.map((swatch) => (
@@ -272,14 +275,11 @@ function TryOnStage(dash: DashboardProps) {
             className="h-full w-full min-h-0"
           />
         )}
-        {status === "idle" &&
-          (dash.originalUrl ? (
-            <img src={dash.originalUrl} alt="Photo that will be dressed" className="mx-auto block h-full w-full object-contain object-top" />
-          ) : (
-            <div className="flex flex-1 items-center justify-center px-6 text-center">
-              <p className="text-sm text-muted-foreground">Add a photo</p>
-            </div>
-          ))}
+        {status === "idle" && (
+          <div className="flex flex-1 items-center justify-center px-6 text-center">
+            {!dash.originalUrl && <p className="text-sm text-muted-foreground">Add a photo</p>}
+          </div>
+        )}
       </div>
       <div className="mt-3 flex shrink-0 flex-wrap items-center gap-2">
         <PrimaryButton disabled={!dash.selectedPlan || dash.vtoRunning || !dash.originalUrl} onClick={dash.onTryOn}>

@@ -177,7 +177,7 @@
     "composition": "A straight column base under an open lightweight jacket.",
     "verifiedFacts": ["Unlined construction", "Light layer weight", "Sleeveless base", "Removable jacket"],
     "preBuyChecks": ["Check the base garment's shoulder, armhole, and length measurements."],
-    "active": true
+    "active": false
   },
   {
     "id": "look_tan_overshirt",
@@ -197,7 +197,7 @@
     "composition": "An unlined overshirt worn open over a straight trouser.",
     "verifiedFacts": ["Overshirt layer", "Light layer weight", "Unlined construction", "Easy-care tag"],
     "preBuyChecks": ["Check the overshirt's sleeve volume and the trouser fabric composition."],
-    "active": true
+    "active": false
   },
   {
     "id": "look_cream_sleeve",
@@ -217,7 +217,7 @@
     "composition": "A light cream top with a relaxed sleeve and fluid trouser.",
     "verifiedFacts": ["Light layer weight", "Relaxed silhouette", "Stretch detail listed", "Sleeved coverage"],
     "preBuyChecks": ["Check opacity and the exact sleeve measurement before buying."],
-    "active": true
+    "active": false
   },
   {
     "id": "look_navy_shell",
@@ -237,6 +237,6 @@
     "composition": "A sleeveless shell under a structured jacket with a tailored trouser.",
     "verifiedFacts": ["Sleeveless base", "Removable jacket", "Stretch detail listed", "Tailored silhouette"],
     "preBuyChecks": ["Check armhole comfort, jacket lining, and the return window."],
-    "active": true
+    "active": false
   }
 ]

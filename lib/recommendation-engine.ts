@@ -81,8 +81,15 @@ function scoreLook(look: LookCatalogRecord, context: WearContext) {
   return { score, reasons: uniqueReasons };
 }
 
-export function rankWearPlans(context: WearContext, recommendationVersion = 1): WearPlan[] {
-  const ranked = getRankedLooks(context).slice(0, 3);
+export function rankWearPlans(context: WearContext, recommendationVersion = 1, excludeImageUrls: string[] = []): WearPlan[] {
+  const usedImages = new Set(excludeImageUrls.filter(Boolean));
+  const ranked = getRankedLooks(context)
+    .filter(({ look }) => {
+      if (usedImages.has(look.sourceImageUrl)) return false;
+      usedImages.add(look.sourceImageUrl);
+      return true;
+    })
+    .slice(0, 3);
   return ranked.map(({ look, reasons }, index) => ({
     planId: `plan_${recommendationVersion}_${look.id}`,
     recommendationVersion,
