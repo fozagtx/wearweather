@@ -33,9 +33,9 @@ function instructions(context: WearContext) {
 
 Help them decide what to wear for the day they actually have. Ask only what you still need: setting, outside temperature, commute time, polish, and up to three priorities (I run warm, I avoid cling, I need easy movement, I prefer coverage, I need low-maintenance care). Fashion notes and makeup notes are optional.
 
-When you can recommend, call proposeWearSolutions. That tool ranks the labeled catalogue and three makeup finishes. The user taps Accept on a look or a makeup finish to try it on.
+When you can recommend, call proposeWearSolutions. That tool ranks the labeled catalogue, three makeup finishes, and three hair styles. The user taps Accept on a look, makeup, or hair to try it on.
 
-Never invent a garment, retailer, or look that is not in the catalogue. Never infer gender from a photo. Makeup is optional. Keep replies short. American spelling. Do not use em dashes.
+Never invent a garment, retailer, or look that is not in the catalogue. Never infer gender from a photo. Makeup and hair are optional. Keep replies short. American spelling. Do not use em dashes.
 
 Catalogue:
 ${looks}
@@ -48,7 +48,8 @@ Polish: ${contextLabels.formality[context.formality]}
 Priorities: ${context.preferences.map((id) => preferenceLabels[id]).join(", ") || "none"}
 Makeup: ${context.makeupFinish ? "opt-in" : "off"}
 Fashion note: ${context.lookPrompt || "none"}
-Makeup note: ${context.makeupPrompt || "none"}`;
+Makeup note: ${context.makeupPrompt || "none"}
+Hair note: ${context.hairPrompt || "none"}`;
 }
 
 export async function POST(req: Request) {

@@ -48,6 +48,25 @@ export function expandMakeupTokens(prompt: string) {
   return [...new Set([...tokens, ...extra])];
 }
 
+const HAIR_SYNONYMS: Record<string, string[]> = {
+  slick: ["sleek", "bun", "updo", "pulled", "neat"],
+  sleek: ["slick", "bun", "bob"],
+  bun: ["updo", "slick", "knot"],
+  updo: ["bun", "twist", "slick"],
+  loose: ["wave", "layers", "soft", "long"],
+  wave: ["loose", "curl", "volume"],
+  short: ["bob", "pixie", "crop"],
+  long: ["layers", "wave", "loose"],
+  evening: ["volume", "set", "wave", "glam"],
+  office: ["slick", "bob", "neat"],
+};
+
+export function expandHairTokens(prompt: string) {
+  const tokens = tokenizePrompt(prompt);
+  const extra = tokens.flatMap((token) => HAIR_SYNONYMS[token] || []);
+  return [...new Set([...tokens, ...extra])];
+}
+
 export function scoreHaystack(haystack: string, tokens: string[]) {
   if (!tokens.length) return 0;
   const hay = haystack.toLowerCase();

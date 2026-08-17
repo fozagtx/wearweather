@@ -24,7 +24,8 @@ export function isValidContext(value: unknown): value is WearContext {
     typeof context.lookPrompt === "string" &&
     context.lookPrompt.length <= 280 &&
     typeof context.makeupPrompt === "string" &&
-    context.makeupPrompt.length <= 280
+    context.makeupPrompt.length <= 280 &&
+    (context.hairPrompt === undefined || (typeof context.hairPrompt === "string" && context.hairPrompt.length <= 280))
   );
 }
 

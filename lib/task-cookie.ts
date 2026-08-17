@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { cookies } from "next/headers";
 
-export type TaskKind = "clothes" | "look" | "makeup";
+export type TaskKind = "clothes" | "look" | "makeup" | "hair";
 type TaskMapping = { providerTaskId: string; lookId: string; createdAt: number; kind?: TaskKind };
 type CookiePayload = { expiresAt: number; tasks: Record<string, TaskMapping> };
 

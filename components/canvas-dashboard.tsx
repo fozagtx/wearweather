@@ -5,6 +5,7 @@ import { CompareCanvas } from "@/components/compare-canvas";
 import { GlowLoad } from "@/components/glow-load";
 import { PHOTO_DRAG_TYPE, PhotoStudio } from "@/components/photo-studio";
 import { GhostButton, PrimaryButton, RetailerLink } from "@/components/ui";
+import type { HairPlan } from "@/lib/hair-engine";
 import type { MakeupPlan } from "@/lib/makeup-engine";
 import {
   FORMALITY_LEVELS,
@@ -51,6 +52,14 @@ export type DashboardProps = {
   makeupBusy?: boolean;
   makeupError?: string;
   onTryMakeup: () => void;
+  hairPlan?: HairPlan;
+  hairPlans?: HairPlan[];
+  onSelectHair?: (plan: HairPlan) => void;
+  hairUrl?: string;
+  hairBusy?: boolean;
+  hairError?: string;
+  hairStartedAt?: number;
+  onTryHair: () => void;
   errorMessages: Record<string, string>;
   solutions: AgentSolution[];
   onAcceptSolution: (solution: AgentSolution) => void;
@@ -228,12 +237,61 @@ function MakeupPicker({
   );
 }
 
+function HairPicker({
+  plans,
+  selected,
+  onSelect,
+}: {
+  plans: HairPlan[];
+  selected?: HairPlan;
+  onSelect: (plan: HairPlan) => void;
+}) {
+  if (!plans.length) return null;
+  const seenThumbs = new Set<string>();
+  return (
+    <div className="mt-3 grid shrink-0 grid-cols-3 gap-2">
+      {plans.map((plan, index) => {
+        const active = selected?.templateId === plan.templateId && selected.title === plan.title;
+        const thumb = plan.thumb && !seenThumbs.has(plan.thumb) ? plan.thumb : undefined;
+        if (plan.thumb) seenThumbs.add(plan.thumb);
+        return (
+          <button
+            key={`${plan.templateId}-${plan.title}-${index}`}
+            type="button"
+            onClick={() => onSelect(plan)}
+            className={`rounded-2xl border bg-card p-2 text-left ${chipFocus} ${
+              active ? "border-foreground/40 ring-2 ring-foreground/15" : "border-border hover:border-foreground/25"
+            }`}
+            aria-pressed={active}
+          >
+            {thumb ? (
+              <img src={thumb} alt="" className="mx-auto block h-20 w-full object-contain object-top" />
+            ) : (
+              <div className="h-20 bg-[#ecece4]" />
+            )}
+            <p className="mt-2 text-sm font-medium leading-snug">{plan.title}</p>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function TryOnStage(dash: DashboardProps) {
   const [compare, setCompare] = useState(46);
   const [over, setOver] = useState(false);
-  const showingMakeup = Boolean(dash.makeupUrl);
-  const leftSrc = showingMakeup ? dash.resultUrl || dash.originalUrl : dash.originalUrl;
-  const rightSrc = showingMakeup ? dash.makeupUrl || dash.resultUrl || dash.originalUrl : dash.resultUrl || dash.originalUrl;
+  const showingHair = Boolean(dash.hairUrl);
+  const showingMakeup = Boolean(dash.makeupUrl) && !showingHair;
+  const leftSrc = showingHair
+    ? dash.makeupUrl || dash.resultUrl || dash.originalUrl
+    : showingMakeup
+      ? dash.resultUrl || dash.originalUrl
+      : dash.originalUrl;
+  const rightSrc = showingHair
+    ? dash.hairUrl || dash.makeupUrl || dash.resultUrl || dash.originalUrl
+    : showingMakeup
+      ? dash.makeupUrl || dash.resultUrl || dash.originalUrl
+      : dash.resultUrl || dash.originalUrl;
   const status = dash.taskError ? "error" : dash.vtoRunning ? "running" : dash.resultUrl ? "done" : "idle";
 
   return (
@@ -255,6 +313,7 @@ function TryOnStage(dash: DashboardProps) {
       >
         {status === "running" && <GlowLoad active className="min-h-0 flex-1" startedAt={dash.vtoStartedAt} label="RENDERING" />}
         {status !== "running" && dash.makeupBusy && <GlowLoad active className="min-h-0 flex-1" startedAt={dash.makeupStartedAt} label="MAKEUP" />}
+        {status !== "running" && !dash.makeupBusy && dash.hairBusy && <GlowLoad active className="min-h-0 flex-1" startedAt={dash.hairStartedAt} label="HAIR" />}
         {status === "error" && (
           <div className="p-8 text-center">
             <p className="text-sm font-medium">Needs another take</p>
@@ -264,13 +323,13 @@ function TryOnStage(dash: DashboardProps) {
             </PrimaryButton>
           </div>
         )}
-        {status === "done" && dash.resultUrl && !dash.makeupBusy && (
+        {status === "done" && dash.resultUrl && !dash.makeupBusy && !dash.hairBusy && (
           <CompareCanvas
             leftSrc={leftSrc}
             rightSrc={rightSrc}
             position={compare}
-            leftLabel={showingMakeup ? "OUTFIT" : "YOUR PHOTO"}
-            rightLabel={showingMakeup ? "OUTFIT + MAKEUP" : "TRY-ON"}
+            leftLabel={showingHair ? (dash.makeupUrl ? "OUTFIT + MAKEUP" : "OUTFIT") : showingMakeup ? "OUTFIT" : "YOUR PHOTO"}
+            rightLabel={showingHair ? "+ HAIR" : showingMakeup ? "OUTFIT + MAKEUP" : "TRY-ON"}
             onPosition={setCompare}
             className="h-full w-full min-h-0"
           />
@@ -292,12 +351,18 @@ function TryOnStage(dash: DashboardProps) {
                 : "Pick a look first"}
         </PrimaryButton>
         {dash.resultUrl && dash.makeupPlan && (
-          <GhostButton disabled={dash.makeupBusy} onClick={dash.onTryMakeup}>
+          <GhostButton disabled={dash.makeupBusy || dash.hairBusy} onClick={dash.onTryMakeup}>
             {dash.makeupBusy ? "Applying makeup…" : "Try makeup"}
+          </GhostButton>
+        )}
+        {dash.resultUrl && dash.hairPlan?.templateId && (
+          <GhostButton disabled={dash.hairBusy || dash.makeupBusy} onClick={dash.onTryHair}>
+            {dash.hairBusy ? "Applying hair…" : "Try hair"}
           </GhostButton>
         )}
       </div>
       {dash.makeupError && <p className="mt-2 text-xs text-[#c43b3e]">{dash.errorMessages[dash.makeupError] || dash.errorMessages.UNEXPECTED_ERROR}</p>}
+      {dash.hairError && <p className="mt-2 text-xs text-[#c43b3e]">{dash.errorMessages[dash.hairError] || dash.errorMessages.UNEXPECTED_ERROR}</p>}
     </section>
   );
 }
@@ -368,6 +433,17 @@ export function CanvasDashboard(dash: DashboardProps) {
                       }}
                     />
                   </label>
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-medium">Hair you want (optional)</span>
+                    <textarea
+                      value={dash.context.hairPrompt || ""}
+                      maxLength={280}
+                      rows={2}
+                      placeholder="Slick bun, loose waves, short crop"
+                      className="w-full resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      onChange={(event) => dash.onContext({ ...dash.context, hairPrompt: event.target.value })}
+                    />
+                  </label>
                   <div>
                     <p className="mb-1.5 text-xs font-medium">Day</p>
                     <Chip value={dash.context.wearMoment} options={WEAR_MOMENTS} labels={contextLabels.wearMoment} onChange={(wearMoment) => dash.onContext({ ...dash.context, wearMoment })} />
@@ -429,6 +505,7 @@ export function CanvasDashboard(dash: DashboardProps) {
           <div className="flex min-h-0 flex-1 flex-col">
             <LookPicker plans={dash.plans} selectedPlan={dash.selectedPlan} onSelectPlan={dash.onSelectPlan} />
             <MakeupPicker plans={dash.makeupPlans || []} selected={dash.makeupPlan} onSelect={(plan) => dash.onSelectMakeup?.(plan)} />
+            <HairPicker plans={dash.hairPlans || []} selected={dash.hairPlan} onSelect={(plan) => dash.onSelectHair?.(plan)} />
           </div>
           <TryOnStage {...dash} />
         </div>

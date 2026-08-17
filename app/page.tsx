@@ -8,6 +8,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { exampleBrief, blankBrief, examplePhotoUrl } from "@/lib/example-brief";
 import { preparePhotoFile } from "@/lib/image-prep";
+import { rankHairPlans, recommendHair, type HairPlan } from "@/lib/hair-engine";
 import { rankMakeupPlans, recommendMakeup, type MakeupPlan } from "@/lib/makeup-engine";
 import { rankWearPlans } from "@/lib/recommendation-engine";
 import { type AgentSolution, type StudioPhoto, type WearContext, type WearPlan } from "@/lib/types";
@@ -45,9 +46,17 @@ export default function Home() {
   const [makeupBusy, setMakeupBusy] = useState(false);
   const [makeupError, setMakeupError] = useState<string>();
   const [makeupPollStartedAt, setMakeupPollStartedAt] = useState<number>();
+  const [hairPlans, setHairPlans] = useState<HairPlan[]>(() => rankHairPlans(exampleBrief, [], 3));
+  const [hairPlan, setHairPlan] = useState<HairPlan>(() => recommendHair(exampleBrief, []));
+  const [hairUrl, setHairUrl] = useState<string>();
+  const [hairRequestId, setHairRequestId] = useState<string>();
+  const [hairBusy, setHairBusy] = useState(false);
+  const [hairError, setHairError] = useState<string>();
+  const [hairPollStartedAt, setHairPollStartedAt] = useState<number>();
   const [solutions, setSolutions] = useState<AgentSolution[]>([]);
   const vtoLock = useRef(false);
   const makeupLock = useRef(false);
+  const hairLock = useRef(false);
 
   const selectedPhoto = photos.find((photo) => photo.id === selectedPhotoId);
   const sourceFile = selectedPhoto?.file;
@@ -132,6 +141,10 @@ export default function Home() {
     setMakeupError(undefined);
     setMakeupBusy(false);
     setMakeupRequestId(undefined);
+    setHairUrl(undefined);
+    setHairError(undefined);
+    setHairBusy(false);
+    setHairRequestId(undefined);
     setPollStartedAt(Date.now());
     try {
       let file = sourceFile;
@@ -213,6 +226,8 @@ export default function Home() {
     makeupLock.current = true;
     setMakeupBusy(true);
     setMakeupError(undefined);
+    setHairUrl(undefined);
+    setHairError(undefined);
     setMakeupPollStartedAt(Date.now());
     try {
       const file = await sourceAsFile();
@@ -318,6 +333,116 @@ export default function Home() {
     };
   }, [makeupRequestId, screen, makeupPollStartedAt]);
 
+  const startHair = async () => {
+    if (!selectedPlan || !hasSource || !resultUrl || hairLock.current || !hairPlan?.templateId) return;
+    hairLock.current = true;
+    setHairBusy(true);
+    setHairError(undefined);
+    setHairPollStartedAt(Date.now());
+    try {
+      const file = await sourceAsFile();
+      const form = new FormData();
+      form.append("photo", file);
+      form.append("lookId", selectedPlan.lookId);
+      form.append("sourceUrl", makeupUrl || resultUrl);
+      form.append("context", JSON.stringify(context));
+      form.append("templateId", hairPlan.templateId);
+      const response = await fetch("/api/hair", { method: "POST", body: form });
+      const body = await response.json();
+      if (!response.ok) {
+        setHairError(body.code || "UNEXPECTED_ERROR");
+        setHairBusy(false);
+        return;
+      }
+      if (body.plan) setHairPlan(body.plan);
+      setHairRequestId(body.requestId);
+    } catch {
+      setHairError("SERVICE_UNAVAILABLE");
+      setHairBusy(false);
+    } finally {
+      hairLock.current = false;
+    }
+  };
+
+  useEffect(() => {
+    if (screen !== "board") return;
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const response = await fetch("/api/hair-plan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ context }),
+        });
+        const body = await response.json();
+        if (cancelled || !response.ok) return;
+        const next: HairPlan[] = Array.isArray(body.plans) && body.plans.length
+          ? body.plans
+          : body.plan
+            ? [body.plan]
+            : rankHairPlans(context, [], 3);
+        setHairPlans(next);
+        setHairPlan((current) => next.find((plan) => plan.templateId === current?.templateId && plan.title === current?.title) || next[0]);
+      } catch {
+        if (cancelled) return;
+        const next = rankHairPlans(context, [], 3);
+        setHairPlans(next);
+        setHairPlan((current) => next.find((plan) => plan.templateId === current?.templateId && plan.title === current?.title) || next[0]);
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [screen, context]);
+
+  useEffect(() => {
+    if (!hairRequestId) return;
+    let cancelled = false;
+    const delays = [2000, 3000, 5000];
+    let attempt = 0;
+    const poll = async () => {
+      if (cancelled) return;
+      const started = hairPollStartedAt || Date.now();
+      const elapsed = Date.now() - started;
+      if (elapsed >= 120000) {
+        setHairError("TASK_FAILED");
+        setHairBusy(false);
+        setHairRequestId(undefined);
+        return;
+      }
+      try {
+        const response = await fetch(`/api/hair-status/${hairRequestId}`, { cache: "no-store" });
+        const body = await response.json();
+        if (cancelled) return;
+        if (body.status === "success" && body.resultUrl) {
+          setHairUrl(body.resultUrl);
+          setHairBusy(false);
+          setHairRequestId(undefined);
+          return;
+        }
+        if (body.status === "error") {
+          setHairError(body.code || "TASK_FAILED");
+          setHairBusy(false);
+          setHairRequestId(undefined);
+          return;
+        }
+      } catch {
+        setHairError("SERVICE_UNAVAILABLE");
+        setHairBusy(false);
+        setHairRequestId(undefined);
+        return;
+      }
+      const delay = delays[Math.min(attempt, delays.length - 1)];
+      attempt += 1;
+      window.setTimeout(poll, delay);
+    };
+    window.setTimeout(poll, delays[0]);
+    return () => {
+      cancelled = true;
+    };
+  }, [hairRequestId, screen, hairPollStartedAt]);
+
   const retry = () => {
     setTaskError(undefined);
     startVto();
@@ -342,6 +467,12 @@ export default function Home() {
     setMakeupRequestId(undefined);
     setMakeupBusy(false);
     setMakeupError(undefined);
+    setHairPlans(rankHairPlans(exampleBrief, [], 3));
+    setHairPlan(recommendHair(exampleBrief, []));
+    setHairUrl(undefined);
+    setHairRequestId(undefined);
+    setHairBusy(false);
+    setHairError(undefined);
     setTaskError(undefined);
     setRecommendationVersion(1);
     setSolutions([]);
@@ -388,12 +519,25 @@ export default function Home() {
               setMakeupPlan(plan);
               setMakeupUrl(undefined);
               setMakeupError(undefined);
+              setHairUrl(undefined);
               setContext((current) => ({ ...current, makeupFinish: true }));
             }}
             makeupUrl={makeupUrl}
             makeupBusy={makeupBusy}
             makeupError={makeupError}
             onTryMakeup={startMakeup}
+            hairPlan={hairPlan}
+            hairPlans={hairPlans}
+            onSelectHair={(plan) => {
+              setHairPlan(plan);
+              setHairUrl(undefined);
+              setHairError(undefined);
+            }}
+            hairUrl={hairUrl}
+            hairBusy={hairBusy}
+            hairError={hairError}
+            hairStartedAt={hairPollStartedAt}
+            onTryHair={startHair}
             errorMessages={errorMessages}
             solutions={solutions}
             onAcceptSolution={(solution) => {
@@ -420,6 +564,10 @@ export default function Home() {
             makeupBusy={makeupBusy}
             makeupTitle={makeupPlan?.title}
             onAcceptMakeup={() => void startMakeup()}
+            canTryHair={Boolean(resultUrl && hairPlan?.templateId && !hairUrl && !hairBusy && !makeupBusy)}
+            hairBusy={hairBusy}
+            hairTitle={hairPlan?.title}
+            onAcceptHair={() => void startHair()}
             onAcceptSolution={(solution) => {
               setSolutions((current) =>
                 current.map((item) =>
@@ -428,11 +576,15 @@ export default function Home() {
               );
               void startVto(solution.plan);
             }}
-            onSolutions={(note, nextPlans, _nextContext, nextMakeup) => {
+            onSolutions={(note, nextPlans, _nextContext, nextMakeup, nextHair) => {
               setSolutions(solutionsFromPlans(note, nextPlans));
               if (nextMakeup?.length) {
                 setMakeupPlans(nextMakeup);
                 setMakeupPlan(nextMakeup[0]);
+              }
+              if (nextHair?.length) {
+                setHairPlans(nextHair);
+                setHairPlan(nextHair[0]);
               }
             }}
           />

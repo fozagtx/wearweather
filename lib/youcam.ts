@@ -180,6 +180,68 @@ export async function getMakeupTask(providerTaskId: string) {
   return { status: "running" as const };
 }
 
+export type HairTemplate = { id: string; thumb?: string; title: string; category_name: string; keep_users_color?: boolean };
+
+let hairTemplateCache: { at: number; templates: HairTemplate[] } | null = null;
+const HAIR_TEMPLATE_TTL_MS = 10 * 60 * 1000;
+
+export async function listHairTemplates(): Promise<HairTemplate[]> {
+  if (hairTemplateCache && Date.now() - hairTemplateCache.at < HAIR_TEMPLATE_TTL_MS) return hairTemplateCache.templates;
+  const templates: HairTemplate[] = [];
+  let token: string | undefined;
+  for (let page = 0; page < 5; page += 1) {
+    const query = new URLSearchParams({ page_size: "20" });
+    if (token) query.set("starting_token", token);
+    const body = await providerJson(`${baseUrl()}/s2s/v2.1/task/template/hair-transfer?${query}`, { method: "GET" });
+    const batch = (body?.data?.templates || []) as HairTemplate[];
+    templates.push(
+      ...batch.map((template) => ({
+        id: template.id,
+        thumb: template.thumb,
+        title: template.title,
+        category_name: template.category_name,
+        keep_users_color: template.keep_users_color,
+      })),
+    );
+    token = body?.data?.next_token;
+    if (!token || !batch.length) break;
+  }
+  hairTemplateCache = { at: Date.now(), templates };
+  return templates;
+}
+
+export async function createHairTask(input: { srcFileUrl?: string; sourceFile?: File; templateId: string }) {
+  let srcFileId: string | undefined;
+  if (!input.srcFileUrl && input.sourceFile) {
+    try {
+      srcFileId = await uploadSource(input.sourceFile, `${baseUrl()}/s2s/v2.0/file/hair-transfer`);
+    } catch {
+      try {
+        srcFileId = await uploadSource(input.sourceFile, `${baseUrl()}/s2s/v2.1/file/hair-transfer`);
+      } catch {
+        srcFileId = await uploadSource(input.sourceFile, `${baseUrl()}/s2s/v2.0/file`);
+      }
+    }
+  }
+  const payload = srcFileId
+    ? { src_file_id: srcFileId, template_id: input.templateId, hair_color: "src" }
+    : { src_file_url: input.srcFileUrl, template_id: input.templateId, hair_color: "src" };
+  const body = await providerJson(`${baseUrl()}/s2s/v2.1/task/hair-transfer`, { method: "POST", body: JSON.stringify(payload) });
+  const providerTaskId = body?.data?.task_id;
+  if (!providerTaskId) throw new Error("YOUCAM_TASK_RESPONSE_INVALID");
+  return { providerTaskId };
+}
+
+export async function getHairTask(providerTaskId: string) {
+  const body = await providerJson(`${baseUrl()}/s2s/v2.1/task/hair-transfer/${encodeURIComponent(providerTaskId)}`, { method: "GET" });
+  const taskStatus = body?.data?.task_status;
+  if (taskStatus === "success") return { status: "success" as const, resultUrl: extractResultUrl(body?.data) };
+  if (taskStatus === "error" || body?.data?.error) {
+    return { status: "error" as const, providerErrorCode: body?.data?.error || body?.data?.error_message || "TASK_FAILED" };
+  }
+  return { status: "running" as const };
+}
+
 export function mapYouCamError(error: unknown) {
   const message = error instanceof Error ? error.message : "";
   if (message.includes("MISSING_YOUCAM_API_KEY")) return "SERVICE_UNAVAILABLE" as const;
@@ -187,7 +249,11 @@ export function mapYouCamError(error: unknown) {
     message.includes("error_pose") ||
     message.includes("error_invalid_src") ||
     message.includes("error_face_position") ||
-    message.includes("error_face_angle")
+    message.includes("error_face_angle") ||
+    message.includes("error_no_shoulder") ||
+    message.includes("error_hair_too_short") ||
+    message.includes("error_insufficient_landmarks") ||
+    message.includes("error_face_pose")
   ) {
     return "PHOTO_GUIDANCE_NEEDED" as const;
   }

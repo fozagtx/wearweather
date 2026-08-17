@@ -1,5 +1,6 @@
 import { tool, type InferUITools, type UIMessage } from "ai";
 import { z } from "zod";
+import { rankHairPlans } from "@/lib/hair-engine";
 import { rankMakeupPlans } from "@/lib/makeup-engine";
 import { rankWearPlans } from "@/lib/recommendation-engine";
 import {
@@ -11,7 +12,7 @@ import {
   type PreferenceId,
   type WearContext,
 } from "@/lib/types";
-import { listLookTemplates } from "@/lib/youcam";
+import { listHairTemplates, listLookTemplates } from "@/lib/youcam";
 
 const briefPatch = z.object({
   wearMoment: z.enum(WEAR_MOMENTS).optional(),
@@ -22,6 +23,7 @@ const briefPatch = z.object({
   makeupFinish: z.boolean().optional(),
   lookPrompt: z.string().max(280).optional(),
   makeupPrompt: z.string().max(280).optional(),
+  hairPrompt: z.string().max(280).optional(),
 });
 
 export function mergeBrief(base: WearContext, patch: z.infer<typeof briefPatch>): WearContext {
@@ -35,6 +37,7 @@ export function mergeBrief(base: WearContext, patch: z.infer<typeof briefPatch>)
     makeupFinish: patch.makeupFinish ?? (patch.makeupPrompt?.trim() ? true : base.makeupFinish),
     lookPrompt: patch.lookPrompt ?? base.lookPrompt,
     makeupPrompt: patch.makeupPrompt ?? base.makeupPrompt,
+    hairPrompt: patch.hairPrompt ?? base.hairPrompt ?? "",
   };
 }
 
@@ -42,7 +45,7 @@ export function wearAgentTools(current: WearContext) {
   return {
     proposeWearSolutions: tool({
       description:
-        "Put 1 to 3 catalogue wear solutions on the board, plus three day-matched makeup finishes. Call this when you can recommend what they should wear. The user accepts a look or a makeup finish to try it on. Makeup is optional. Do not infer gender.",
+        "Put 1 to 3 catalogue wear solutions on the board, plus three makeup finishes and three hair styles matched to the day. The user accepts a look, makeup, or hair to try it on. Makeup and hair are optional. Do not infer gender.",
       inputSchema: briefPatch.extend({
         note: z.string().max(220).describe("One short pitch for why these looks fit the day."),
       }),
@@ -50,12 +53,18 @@ export function wearAgentTools(current: WearContext) {
         const context = mergeBrief(current, patch);
         const plans = rankWearPlans(context, Date.now());
         let makeupPlans = rankMakeupPlans(context, [], 3);
+        let hairPlans = rankHairPlans(context, [], 3);
         try {
           makeupPlans = rankMakeupPlans(context, await listLookTemplates(), 3);
         } catch {
           makeupPlans = rankMakeupPlans(context, [], 3);
         }
-        return { note, context, plans, makeupPlans };
+        try {
+          hairPlans = rankHairPlans(context, await listHairTemplates(), 3);
+        } catch {
+          hairPlans = rankHairPlans(context, [], 3);
+        }
+        return { note, context, plans, makeupPlans, hairPlans };
       },
     }),
   };

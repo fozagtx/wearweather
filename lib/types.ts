@@ -20,6 +20,7 @@ export type WearContext = {
   makeupFinish: boolean;
   lookPrompt: string;
   makeupPrompt: string;
+  hairPrompt: string;
 };
 
 export type StudioPhoto = {

@@ -10,6 +10,7 @@ export const exampleBrief: WearContext = {
   makeupFinish: true,
   lookPrompt: "",
   makeupPrompt: "",
+  hairPrompt: "",
 };
 
 export const blankBrief: WearContext = {
@@ -21,6 +22,7 @@ export const blankBrief: WearContext = {
   makeupFinish: false,
   lookPrompt: "",
   makeupPrompt: "",
+  hairPrompt: "",
 };
 
 export const examplePhotoUrl = "/catalog/office-dark.jpg";
