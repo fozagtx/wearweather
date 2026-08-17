@@ -176,9 +176,15 @@ function Faq() {
 export function LandingPage({
   onExample,
   onUpload,
+  hasSave,
+  onContinue,
+  onForgetSave,
 }: {
   onExample: () => void;
   onUpload: () => void;
+  hasSave?: boolean;
+  onContinue?: () => void;
+  onForgetSave?: () => void;
 }) {
   const plans = useMemo(() => rankWearPlans(exampleBrief, 1), []);
 
@@ -197,9 +203,23 @@ export function LandingPage({
               Rank three looks for the day you actually have, then try one on a photo before you buy.
             </p>
             <div className="mt-5 flex flex-wrap gap-3">
-              <PrimaryButton onClick={onExample}>Rehearse the example day</PrimaryButton>
+              {hasSave && onContinue && <PrimaryButton onClick={onContinue}>Continue saved look</PrimaryButton>}
+              {hasSave ? (
+                <GhostButton onClick={onExample}>Rehearse the example day</GhostButton>
+              ) : (
+                <PrimaryButton onClick={onExample}>Rehearse the example day</PrimaryButton>
+              )}
               <GhostButton onClick={onUpload}>Start with my photo</GhostButton>
             </div>
+            {hasSave && onForgetSave && (
+              <button
+                type="button"
+                onClick={onForgetSave}
+                className="mt-3 text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                Clear saved look
+              </button>
+            )}
           </div>
           <div className="min-w-0">
             <HeroBoard />

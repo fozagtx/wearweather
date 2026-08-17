@@ -49,6 +49,10 @@ export type DashboardProps = {
   makeupStartedAt?: number;
   onTryOn: () => void;
   onRetry: () => void;
+  saveLabel?: string;
+  saveBusy?: boolean;
+  onSave?: () => void;
+  onDownload?: () => void;
   makeupPlan?: MakeupPlan;
   makeupPlans?: MakeupPlan[];
   onSelectMakeup?: (plan: MakeupPlan) => void;
@@ -415,6 +419,12 @@ function TryOnStage(dash: DashboardProps) {
             360
           </span>
         )}
+        {dash.onSave && (
+          <GhostButton disabled={dash.saveBusy} onClick={dash.onSave} aria-busy={dash.saveBusy}>
+            {dash.saveLabel || "Save"}
+          </GhostButton>
+        )}
+        {dash.onDownload && <GhostButton onClick={dash.onDownload}>Download</GhostButton>}
       </div>
       {dash.resultUrl && (
         <PromptInput

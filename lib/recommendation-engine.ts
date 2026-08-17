@@ -1,3 +1,4 @@
+import { getLookById } from "./catalogue";
 import { contextLabels, type LookCatalogRecord, type PreferenceId, type WearContext, type WearPlan } from "./types";
 import { expandFashionTokens, scoreHaystack } from "./prompt-match";
 
@@ -91,6 +92,24 @@ function scoreLook(look: LookCatalogRecord, context: WearContext) {
   while (uniqueReasons.length < 2) uniqueReasons.push(look.verifiedFacts[uniqueReasons.length] || "Catalogue metadata is available for review.");
 
   return { score, reasons: uniqueReasons };
+}
+
+export function wearPlanForLook(lookId: string, context: WearContext, recommendationVersion = 1): WearPlan | undefined {
+  const look = getLookById(lookId);
+  if (!look) return undefined;
+  const { reasons } = scoreLook(look, context);
+  return {
+    planId: `plan_${recommendationVersion}_${look.id}`,
+    recommendationVersion,
+    lookId: look.id,
+    rank: 1,
+    title: look.title,
+    reasons,
+    checkBeforeBuying: look.preBuyChecks[0],
+    productUrl: look.productUrl,
+    sourceImageUrl: look.sourceImageUrl,
+    garmentMetadataSummary: metadataSummary(look),
+  };
 }
 
 export function rankWearPlans(context: WearContext, recommendationVersion = 1, excludeImageUrls: string[] = []): WearPlan[] {

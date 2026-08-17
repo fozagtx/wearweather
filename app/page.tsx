@@ -11,7 +11,8 @@ import { exampleBrief, blankBrief, examplePhotoUrl } from "@/lib/example-brief";
 import { preparePhotoFile } from "@/lib/image-prep";
 import { type HairPlan } from "@/lib/hair-engine";
 import { type MakeupPlan } from "@/lib/makeup-engine";
-import { rankWearPlans } from "@/lib/recommendation-engine";
+import { rankWearPlans, wearPlanForLook } from "@/lib/recommendation-engine";
+import { blobFromImageSrc, clearStudio, downloadImage, loadStudio, studioHasWork, writeStudio, type SavedStudio } from "@/lib/studio-save";
 import { jobFromHairPhase, studioStatus, type StudioJob } from "@/lib/studio-status";
 import { type AgentSolution, type StudioPhoto, type WearContext, type WearPlan } from "@/lib/types";
 const errorMessages: Record<string, string> = {
@@ -19,11 +20,19 @@ const errorMessages: Record<string, string> = {
   PHOTO_TOO_LARGE: "This image is larger than 12 MB. Choose a smaller file.",
   PHOTO_GUIDANCE_NEEDED: "Use one clear, front-facing standing photo with your whole face in frame and shoulders visible.",
   REFERENCE_INVALID: "This outfit image is not suitable for try-on. Choose another Wear Plan.",
-  TASK_FAILED: "We could not create this visual rehearsal. Your plan is still here; please try again.",
+  TASK_FAILED: "That step failed. Your photo and look pick are still on the board. Try again.",
   SERVICE_UNAVAILABLE: "The try-on service is temporarily unavailable. Wait a moment, then try again.",
   RATE_LIMITED: "YouCam asked us to slow down. Wait a few seconds, then try again. You do not need to leave this page.",
   SESSION_EXPIRED: "This session has expired for privacy. Start a new rehearsal.",
   UNEXPECTED_ERROR: "Something went wrong. No new result was created.",
+};
+
+const jobByEyebrow: Record<string, StudioJob> = {
+  Look: "look",
+  Makeup: "makeup",
+  Hair: "hair",
+  Edit: "edit",
+  "360": "orbit",
 };
 
 export default function Home() {
@@ -66,11 +75,17 @@ export default function Home() {
   const [orbitBusy, setOrbitBusy] = useState(false);
   const [viewMode, setViewMode] = useState<"compare" | "spin">("compare");
   const [solutions, setSolutions] = useState<AgentSolution[]>([]);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [hasSave, setHasSave] = useState(false);
   const vtoLock = useRef(false);
   const makeupGen = useRef(0);
   const hairGen = useRef(0);
   const orbitGen = useRef(0);
   const editLock = useRef(false);
+  const blobCache = useRef(new Map<string, Blob>());
+  const restoredUrls = useRef<string[]>([]);
+  const savedRef = useRef<SavedStudio | null>(null);
+  const skipAutosave = useRef(true);
 
   const selectedPhoto = photos.find((photo) => photo.id === selectedPhotoId);
   const sourceFile = selectedPhoto?.file;
@@ -91,6 +106,12 @@ export default function Home() {
   };
 
   const notifyError = (eyebrow: string, code?: string) => {
+    const job = jobByEyebrow[eyebrow];
+    if (job && code === "TASK_FAILED") {
+      const copy = studioStatus[job];
+      show({ id: "job", tone: "error", eyebrow: copy.eyebrow, title: copy.failedTitle, detail: copy.failedDetail });
+      return;
+    }
     show({
       id: "job",
       tone: "error",
@@ -111,10 +132,171 @@ export default function Home() {
     else if (orbitBusy) notifyJob("orbit", "running");
   }, [screen, activeRequestId, makeupBusy, hairBusy, hairPhase, editBusy, orbitBusy, dismissAll, show]);
 
+  const rememberBlob = (url: string, blob: Blob) => {
+    blobCache.current.set(url, blob);
+    restoredUrls.current.push(url);
+  };
+
+  const urlFromBlob = (blob?: Blob) => {
+    if (!blob) return undefined;
+    const url = URL.createObjectURL(blob);
+    rememberBlob(url, blob);
+    return url;
+  };
+
+  const hydrateStudio = (saved: SavedStudio) => {
+    setMode(saved.mode);
+    setContext(saved.context);
+    const nextPhotos = saved.photos.map((photo) => {
+      const file = new File([photo.blob], photo.name, { type: photo.type || "image/jpeg" });
+      const url = URL.createObjectURL(file);
+      rememberBlob(url, photo.blob);
+      return { id: photo.id, file, url, label: photo.label, x: photo.x, y: photo.y };
+    });
+    setPhotos(nextPhotos);
+    setSelectedPhotoId(saved.selectedPhotoId || nextPhotos[0]?.id);
+    setResultUrl(urlFromBlob(saved.result));
+    setMakeupUrl(urlFromBlob(saved.makeup));
+    setHairUrl(urlFromBlob(saved.hair));
+    setEditUrl(urlFromBlob(saved.edit));
+    setEditBeforeUrl(urlFromBlob(saved.editBefore));
+    const frames = saved.orbit?.map((blob) => urlFromBlob(blob)).filter((url): url is string => Boolean(url));
+    setOrbitFrames(frames?.length ? frames : undefined);
+    if (frames && frames.length > 1) setViewMode("spin");
+    const plan = saved.selectedLookId ? wearPlanForLook(saved.selectedLookId, saved.context) : undefined;
+    if (plan) setSelectedPlan(plan);
+  };
+
+  const persistStudio = async (manual = false) => {
+    if (screen !== "board") return;
+    const hasWork = Boolean(resultUrl || makeupUrl || hairUrl || editUrl || photos.length);
+    if (!hasWork && !manual) return;
+    setSaveState("saving");
+    try {
+      const cached = async (url?: string) => {
+        if (!url) return undefined;
+        const hit = blobCache.current.get(url);
+        if (hit) return hit;
+        const blob = url.startsWith("blob:") || url.startsWith("data:") || url.startsWith("/")
+          ? await (await fetch(url)).blob()
+          : await blobFromImageSrc(url);
+        if (blob) blobCache.current.set(url, blob);
+        return blob;
+      };
+      const payload: SavedStudio = {
+        version: 1,
+        savedAt: Date.now(),
+        mode,
+        context,
+        selectedLookId: selectedPlan?.lookId,
+        selectedPhotoId,
+        photos: photos.map((photo) => ({
+          id: photo.id,
+          name: photo.file.name,
+          type: photo.file.type,
+          label: photo.label,
+          x: photo.x,
+          y: photo.y,
+          blob: photo.file,
+        })),
+        result: await cached(resultUrl),
+        makeup: await cached(makeupUrl),
+        hair: await cached(hairUrl),
+        edit: await cached(editUrl),
+        editBefore: await cached(editBeforeUrl),
+        orbit: orbitFrames
+          ? ((await Promise.all(orbitFrames.map((frame) => cached(frame)))).filter(Boolean) as Blob[])
+          : undefined,
+        makeupTemplateId: makeupPlan?.templateId,
+        hairTemplateId: hairPlan?.templateId,
+      };
+      await writeStudio(payload);
+      savedRef.current = payload;
+      setHasSave(studioHasWork(payload));
+      setSaveState("saved");
+      if (manual) {
+        show({
+          id: "save",
+          tone: "done",
+          eyebrow: "Save",
+          title: "Saved on this device",
+          detail: "Refresh keeps this look. Leave studio does not erase it.",
+        });
+      }
+    } catch {
+      setSaveState("error");
+      if (manual) {
+        show({
+          id: "save",
+          tone: "error",
+          eyebrow: "Save",
+          title: "Could not save on this device",
+          detail: "Try again, or download the look.",
+        });
+      }
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    const boot = async () => {
+      const saved = await loadStudio();
+      if (cancelled) return;
+      savedRef.current = saved;
+      setHasSave(studioHasWork(saved));
+      if (!studioHasWork(saved) || !saved) return;
+      hydrateStudio(saved);
+      setScreen("board");
+      skipAutosave.current = false;
+      setSaveState("saved");
+    };
+    void boot();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (resultUrl || photos.length) skipAutosave.current = false;
+  }, [resultUrl, photos.length]);
+
+  useEffect(() => {
+    if (screen !== "board" || skipAutosave.current) return;
+    if (activeRequestId || makeupBusy || hairBusy || editBusy || orbitBusy) return;
+    const timer = window.setTimeout(() => {
+      void persistStudio(false);
+    }, 700);
+    return () => window.clearTimeout(timer);
+  }, [
+    screen,
+    mode,
+    context,
+    selectedPlan?.lookId,
+    photos,
+    selectedPhotoId,
+    resultUrl,
+    makeupUrl,
+    hairUrl,
+    editUrl,
+    editBeforeUrl,
+    orbitFrames,
+    makeupPlan?.templateId,
+    hairPlan?.templateId,
+    activeRequestId,
+    makeupBusy,
+    hairBusy,
+    editBusy,
+    orbitBusy,
+  ]);
+
   useEffect(() => {
     const ranked = rankWearPlans(context, recommendationVersion, originalUrl ? [originalUrl] : []);
     setPlans(ranked);
-    setSelectedPlan((current) => ranked.find((plan) => plan.lookId === current?.lookId) || ranked[0]);
+    setSelectedPlan((current) => {
+      const wanted = current?.lookId || savedRef.current?.selectedLookId;
+      if (wanted) return ranked.find((plan) => plan.lookId === wanted) || wearPlanForLook(wanted, context) || current || ranked[0];
+      return ranked[0];
+    });
   }, [context, recommendationVersion, originalUrl]);
 
   const startExample = () => {
@@ -522,6 +704,7 @@ export default function Home() {
   useEffect(() => {
     if (screen !== "board" || !wornImageUrl || !resultUrl) return;
     if (activeRequestId || makeupBusy || hairBusy || editBusy) return;
+    if (wornImageUrl.startsWith("blob:")) return;
     const gen = ++orbitGen.current;
     setOrbitBusy(true);
     setOrbitFrames(undefined);
@@ -602,10 +785,45 @@ export default function Home() {
     startVto();
   };
 
+  const continueSaved = () => {
+    const saved = savedRef.current;
+    if (!saved || !studioHasWork(saved)) return;
+    hydrateStudio(saved);
+    setScreen("board");
+    skipAutosave.current = false;
+    setSaveState("saved");
+  };
+
+  const forgetSave = async () => {
+    await clearStudio();
+    savedRef.current = null;
+    setHasSave(false);
+    setSaveState("idle");
+  };
+
+  const saveNow = () => {
+    skipAutosave.current = false;
+    void persistStudio(true);
+  };
+
+  const downloadLook = async () => {
+    const source = wornImageUrl;
+    if (!source) return;
+    try {
+      await downloadImage(source, "wearweather-look.jpg");
+      show({ id: "save", tone: "done", eyebrow: "Save", title: "Downloaded the look" });
+    } catch {
+      show({ id: "save", tone: "error", eyebrow: "Save", title: "Could not download the look" });
+    }
+  };
+
   const reset = async () => {
-    if (!window.confirm("Leave this studio and return home? Plans in this session will be cleared.")) return;
+    if (!window.confirm("Leave the studio? Your last save stays on this device.")) return;
     await fetch("/api/session", { method: "DELETE" }).catch(() => undefined);
     photos.forEach((photo) => URL.revokeObjectURL(photo.url));
+    restoredUrls.current.forEach((url) => URL.revokeObjectURL(url));
+    restoredUrls.current = [];
+    blobCache.current.clear();
     setScreen("start");
     setMode("example");
     setContext(exampleBrief);
@@ -643,12 +861,25 @@ export default function Home() {
 
   return (
     <>
-      <SiteHeader onStart={startExample} showReset={screen !== "start"} onReset={reset} />
+      <SiteHeader
+        onStart={startExample}
+        showReset={screen !== "start"}
+        onReset={reset}
+        saveLabel={saveState === "saving" ? "Saving" : saveState === "saved" ? "Saved" : saveState === "error" ? "Save failed" : "Save"}
+        onSave={saveNow}
+        saveBusy={saveState === "saving"}
+      />
       <StudioToasts toasts={toasts} onDismiss={dismiss} />
       {screen === "start" ? (
         <>
           <main className="flex flex-col bg-background pt-14">
-            <LandingPage onExample={startExample} onUpload={startUpload} />
+            <LandingPage
+              onExample={startExample}
+              onUpload={startUpload}
+              hasSave={hasSave}
+              onContinue={continueSaved}
+              onForgetSave={() => void forgetSave()}
+            />
           </main>
           <SiteFooter />
         </>
@@ -678,6 +909,10 @@ export default function Home() {
             makeupStartedAt={makeupPollStartedAt}
             onTryOn={() => startVto()}
             onRetry={retry}
+            saveLabel={saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved" : saveState === "error" ? "Save failed" : "Save"}
+            saveBusy={saveState === "saving"}
+            onSave={saveNow}
+            onDownload={wornImageUrl ? () => void downloadLook() : undefined}
             makeupPlan={makeupPlan}
             makeupPlans={makeupPlans}
             onSelectMakeup={(plan) => {

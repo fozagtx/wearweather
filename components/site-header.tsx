@@ -14,10 +14,16 @@ export function SiteHeader({
   onStart,
   showReset,
   onReset,
+  saveLabel,
+  onSave,
+  saveBusy,
 }: {
   onStart: () => void;
   showReset: boolean;
   onReset: () => void;
+  saveLabel?: string;
+  onSave?: () => void;
+  saveBusy?: boolean;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -69,9 +75,21 @@ export function SiteHeader({
                 </nav>
               )}
               {showReset ? (
-                <button type="button" onClick={onReset} className={ctaClass}>
-                  Leave studio
-                </button>
+                <>
+                  {onSave && (
+                    <button
+                      type="button"
+                      onClick={onSave}
+                      disabled={saveBusy}
+                      className="h-8 min-w-16 rounded-2xl border border-border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-45"
+                    >
+                      {saveLabel || "Save"}
+                    </button>
+                  )}
+                  <button type="button" onClick={onReset} className={ctaClass}>
+                    Leave studio
+                  </button>
+                </>
               ) : (
                 <button type="button" onClick={onStart} className={ctaClass}>
                   Test it
@@ -80,9 +98,21 @@ export function SiteHeader({
             </div>
             <div className="flex items-center gap-2 lg:hidden">
               {showReset ? (
-                <button type="button" onClick={onReset} className={ctaClass}>
-                  Leave
-                </button>
+                <>
+                  {onSave && (
+                    <button
+                      type="button"
+                      onClick={onSave}
+                      disabled={saveBusy}
+                      className="h-8 min-w-14 rounded-2xl border border-border bg-background px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-45"
+                    >
+                      {saveLabel || "Save"}
+                    </button>
+                  )}
+                  <button type="button" onClick={onReset} className={ctaClass}>
+                    Leave
+                  </button>
+                </>
               ) : (
                 <>
                   <button type="button" onClick={onStart} className={ctaClass}>
