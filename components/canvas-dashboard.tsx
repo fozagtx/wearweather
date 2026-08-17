@@ -468,7 +468,8 @@ const nodeTypes: NodeTypes = {
 function FlowBoard({ value }: { value: DashboardProps }) {
   const shellRef = useRef<HTMLDivElement>(null);
   const seeded = useRef(false);
-  const { setViewport } = useReactFlow();
+  const framed = useRef(false);
+  const { fitView } = useReactFlow();
   const [nodes, setNodes, onNodesChangeBase] = useNodesState(layoutNodes(1280, value.plans));
   const [edges, setEdges, onEdgesChange] = useEdgesState(layoutEdges(value.plans, value.selectedPlan));
 
@@ -478,6 +479,13 @@ function FlowBoard({ value }: { value: DashboardProps }) {
     );
   }, [onNodesChangeBase]);
 
+  const frameBoard = useCallback(
+    (animate = false) => {
+      fitView({ padding: 0.18, minZoom: 0.34, maxZoom: 0.62, duration: animate ? 220 : 0 });
+    },
+    [fitView],
+  );
+
   const seedLayout = useCallback(() => {
     const shell = shellRef.current;
     if (!shell || seeded.current) return;
@@ -486,8 +494,8 @@ function FlowBoard({ value }: { value: DashboardProps }) {
     seeded.current = true;
     setNodes(layoutNodes(width, value.plans));
     setEdges(layoutEdges(value.plans, value.selectedPlan));
-    requestAnimationFrame(() => setViewport({ x: 20, y: 16, zoom: 1 }, { duration: 0 }));
-  }, [setEdges, setNodes, setViewport, value.plans, value.selectedPlan]);
+    requestAnimationFrame(() => frameBoard(false));
+  }, [frameBoard, setEdges, setNodes, value.plans, value.selectedPlan]);
 
   useLayoutEffect(() => {
     const shell = shellRef.current;
@@ -499,6 +507,15 @@ function FlowBoard({ value }: { value: DashboardProps }) {
     observer.observe(shell);
     return () => observer.disconnect();
   }, [seedLayout]);
+
+  useEffect(() => {
+    if (!seeded.current || framed.current) return;
+    const timer = window.setTimeout(() => {
+      framed.current = true;
+      frameBoard(false);
+    }, 280);
+    return () => window.clearTimeout(timer);
+  }, [frameBoard, value.plans.length]);
 
   useEffect(() => {
     if (!seeded.current) return;
@@ -575,9 +592,10 @@ function FlowBoard({ value }: { value: DashboardProps }) {
           preventScrolling
           connectionLineType={ConnectionLineType.SmoothStep}
           defaultEdgeOptions={{ type: "smoothstep", style: { stroke: "#c4c4b4", strokeWidth: 1.5 } }}
-          minZoom={0.35}
-          maxZoom={1.6}
-          defaultViewport={{ x: 20, y: 16, zoom: 1 }}
+          minZoom={0.3}
+          maxZoom={1.4}
+          defaultViewport={{ x: 24, y: 20, zoom: 0.5 }}
+          onInit={() => frameBoard(false)}
           deleteKeyCode={null}
           selectionOnDrag={false}
         >
