@@ -31,10 +31,22 @@ export function AgentDock({
   context,
   onContext,
   onSolutions,
+  solutions = [],
+  selectedPlan,
+  onSelectPlan,
+  onAcceptSolution,
+  canTryOn = false,
+  busy = false,
 }: {
   context: WearContext;
   onContext: (next: WearContext) => void;
   onSolutions: (note: string, plans: WearPlan[], nextContext: WearContext) => void;
+  solutions?: AgentSolution[];
+  selectedPlan?: WearPlan;
+  onSelectPlan?: (plan: WearPlan) => void;
+  onAcceptSolution?: (solution: AgentSolution) => void;
+  canTryOn?: boolean;
+  busy?: boolean;
 }) {
   const prompts = [
     "Client meeting, hot, long commute. What should I wear?",
@@ -72,9 +84,14 @@ export function AgentDock({
         if (!output.plans?.length) continue;
         onContext(output.context);
         onSolutions(output.note, output.plans, output.context);
+        setOpen(true);
+        onSelectPlan?.(output.plans[0]);
       }
     }
-  }, [messages, onContext, onSolutions]);
+  }, [messages, onContext, onSolutions, onSelectPlan]);
+
+  const pending = solutions.filter((item) => item.status === "open");
+  const acceptTarget = pending.find((item) => item.plan.lookId === selectedPlan?.lookId) || pending[0];
 
   const errorText = (() => {
     const message = error?.message || "";
@@ -92,7 +109,7 @@ export function AgentDock({
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-      <div className="pointer-events-auto w-full max-w-xl overflow-hidden rounded-3xl border border-border bg-card shadow-[0_16px_40px_rgba(26,26,20,0.12)]">
+      <div className="pointer-events-auto w-full max-w-3xl overflow-hidden rounded-3xl border border-border bg-card shadow-[0_16px_40px_rgba(26,26,20,0.12)]">
         <button
           type="button"
           className="flex w-full min-h-11 items-center justify-between px-4 py-2 text-left"
@@ -109,7 +126,7 @@ export function AgentDock({
             {open && messages.length === 0 && (
               <div className="space-y-3">
                 <p className="text-muted-foreground">
-                  Say the day in plain words. Ranked looks land in step 3. Accept one to try it on this photo.
+                  Say the day in plain words. Ranked looks land in step 3. Accept appears in this box. That starts try-on.
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {prompts.map((prompt) => (
@@ -145,7 +162,7 @@ export function AgentDock({
                   if (isProposeTool(part)) {
                     return (
                       <p key={part.toolCallId} className="mt-0.5 text-muted-foreground">
-                        {part.state === "output-available" ? "Looks are in step 3. Accept one to try it on." : "Choosing looks…"}
+                        {part.state === "output-available" ? "Looks are ready. Accept in the box to try one on." : "Choosing looks…"}
                       </p>
                     );
                   }
@@ -171,14 +188,29 @@ export function AgentDock({
           <label className="sr-only" htmlFor="stylist-ask">
             Ask what to wear
           </label>
-          <input
-            id="stylist-ask"
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            disabled={status === "streaming" || status === "submitted"}
-            placeholder="What should I wear today?"
-            className="min-h-10 min-w-0 flex-1 rounded-xl border border-border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
+          <div className="flex min-h-10 min-w-0 flex-1 items-center rounded-xl border border-border bg-background focus-within:ring-2 focus-within:ring-ring">
+            <input
+              id="stylist-ask"
+              value={input}
+              onChange={(event) => setInput(event.target.value)}
+              disabled={status === "streaming" || status === "submitted"}
+              placeholder={acceptTarget ? acceptTarget.plan.title : "What should I wear today?"}
+              className="min-h-10 min-w-0 flex-1 rounded-xl bg-transparent px-3 text-sm outline-none"
+            />
+            {acceptTarget && (
+              <PrimaryButton
+                type="button"
+                className="mr-1 min-h-8 px-3 py-1.5 text-xs"
+                disabled={busy || !canTryOn}
+                onClick={() => {
+                  onSelectPlan?.(acceptTarget.plan);
+                  onAcceptSolution?.(acceptTarget);
+                }}
+              >
+                {!canTryOn ? "Add a photo first" : busy ? "Dressing…" : "Accept"}
+              </PrimaryButton>
+            )}
+          </div>
           <PrimaryButton className="min-h-10 px-3 py-2 text-xs" disabled={status === "streaming" || status === "submitted" || !input.trim()} type="submit">
             {status === "streaming" || status === "submitted" ? "…" : "Ask"}
           </PrimaryButton>

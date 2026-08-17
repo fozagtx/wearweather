@@ -52,10 +52,12 @@ export function CompareCanvas({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     const dpr = Math.min(2, window.devicePixelRatio || 1);
-    const img = leftImage.current || rightImage.current;
     const width = canvas.clientWidth;
-    const height = img && img.width ? Math.round(width * (img.height / img.width)) : Math.max(canvas.clientHeight, 320);
-    canvas.style.height = `${height}px`;
+    const parentH = canvas.parentElement?.clientHeight || 0;
+    const img = leftImage.current || rightImage.current;
+    const height = parentH > 80 ? parentH : img && img.width ? Math.round(width * (img.height / img.width)) : 320;
+    if (parentH > 80) canvas.style.height = "100%";
+    else canvas.style.height = `${height}px`;
     canvas.width = Math.round(width * dpr);
     canvas.height = Math.round(height * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -108,7 +110,7 @@ export function CompareCanvas({
 
   return (
     <div className={`relative bg-[#ecece4] ${className}`}>
-      <canvas ref={canvasRef} className="block w-full" />
+      <canvas ref={canvasRef} className="block h-full w-full" />
       <label className="sr-only" htmlFor="compare-slider">
         Compare original photo and virtual rendering
       </label>

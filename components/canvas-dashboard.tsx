@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { CompareCanvas } from "@/components/compare-canvas";
 import { GlowLoad } from "@/components/glow-load";
 import { PHOTO_DRAG_TYPE, PhotoStudio } from "@/components/photo-studio";
@@ -143,30 +143,22 @@ function LookPicker({
   selectedPlan,
   solutions,
   onSelectPlan,
-  onAcceptSolution,
-  onDismissSolution,
 }: {
   plans: WearPlan[];
   selectedPlan?: WearPlan;
   solutions: AgentSolution[];
   onSelectPlan: (plan: WearPlan) => void;
-  onAcceptSolution: (solution: AgentSolution) => void;
-  onDismissSolution: (id: string) => void;
 }) {
   const openSolutions = solutions.filter((item) => item.status === "open");
   const solutionFor = (lookId: string) => openSolutions.find((item) => item.plan.lookId === lookId);
 
   return (
-    <section id="step-look" className="scroll-mt-20">
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <p className="font-mono text-[10px] tracking-[0.16em] text-muted-foreground">03 LOOK</p>
-          <h2 className="mt-1 text-lg font-medium tracking-[-0.3px]">
-            {openSolutions.length ? "Stylist picks. Accept one to try it on." : "Pick a look."}
-          </h2>
-        </div>
-      </div>
-      <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
+    <section id="step-look" className="flex min-h-0 flex-col">
+      <p className="font-mono text-[10px] tracking-[0.16em] text-muted-foreground">03 LOOK</p>
+      <h2 className="mt-1 text-base font-medium tracking-[-0.3px]">
+        {openSolutions.length ? "Stylist picks. Accept in the box below." : "Pick a look."}
+      </h2>
+      <div className="mt-3 grid min-h-0 flex-1 grid-cols-3 gap-2">
         {plans.map((plan) => {
           const active = selectedPlan?.lookId === plan.lookId;
           const solution = solutionFor(plan.lookId);
@@ -175,44 +167,26 @@ function LookPicker({
               key={plan.lookId}
               type="button"
               onClick={() => onSelectPlan(plan)}
-              className={`rounded-2xl border bg-card p-2 text-left ${chipFocus} ${
+              className={`flex min-h-0 flex-col rounded-2xl border bg-card p-2 text-left ${chipFocus} ${
                 active ? "border-foreground/40 ring-2 ring-foreground/15" : "border-border hover:border-foreground/25"
               }`}
               aria-pressed={active}
             >
-              <img src={plan.sourceImageUrl} alt="" className="mx-auto block h-auto max-h-40 w-full object-contain object-top sm:max-h-52" />
+              <div className="min-h-40 flex-1 bg-[#ecece4] lg:min-h-0">
+                <img src={plan.sourceImageUrl} alt="" className="mx-auto block h-full w-full object-contain object-top" />
+              </div>
               <p className="mt-2 font-mono text-[10px] tracking-[0.12em] text-muted-foreground">0{plan.rank}</p>
-              <p className="mt-0.5 text-xs font-medium leading-snug sm:text-sm">{plan.title}</p>
+              <p className="mt-0.5 text-sm font-medium leading-snug">{plan.title}</p>
               {solution && <p className="mt-1 text-[11px] text-brand">Stylist pick</p>}
             </button>
           );
         })}
       </div>
       {selectedPlan && (
-        <div className="mt-4 rounded-2xl border border-border bg-card p-4">
+        <div className="mt-3 shrink-0">
           <p className="text-sm leading-relaxed">{selectedPlan.reasons[0]}</p>
-          {openSolutions.find((item) => item.plan.lookId === selectedPlan.lookId)?.note && (
-            <p className="mt-2 text-sm text-muted-foreground">
-              {openSolutions.find((item) => item.plan.lookId === selectedPlan.lookId)?.note}
-            </p>
-          )}
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            {(() => {
-              const solution = solutionFor(selectedPlan.lookId);
-              if (solution) {
-                return (
-                  <>
-                    <PrimaryButton className="min-h-10 px-4 py-2 text-xs" onClick={() => onAcceptSolution(solution)}>
-                      Accept and try on
-                    </PrimaryButton>
-                    <GhostButton className="min-h-10 px-4 py-2 text-xs" onClick={() => onDismissSolution(solution.id)}>
-                      Not this
-                    </GhostButton>
-                  </>
-                );
-              }
-              return <RetailerLink href={selectedPlan.productUrl} compact />;
-            })()}
+          <div className="mt-2">
+            <RetailerLink href={selectedPlan.productUrl} compact />
           </div>
         </div>
       )}
@@ -229,11 +203,11 @@ function TryOnStage(dash: DashboardProps) {
   const status = dash.taskError ? "error" : dash.vtoRunning ? "running" : dash.resultUrl ? "done" : "idle";
 
   return (
-    <section id="step-you" className="scroll-mt-20">
+    <section id="step-you" className="flex min-h-0 flex-col">
       <p className="font-mono text-[10px] tracking-[0.16em] text-muted-foreground">04 ON YOU</p>
-      <h2 className="mt-1 text-lg font-medium tracking-[-0.3px]">See it on this photo.</h2>
+      <h2 className="mt-1 text-base font-medium tracking-[-0.3px]">See it on this photo.</h2>
       <div
-        className={`mt-4 overflow-hidden rounded-2xl border bg-[#ecece4] ${over ? "border-foreground" : "border-border"}`}
+        className={`mt-3 flex min-h-64 flex-1 flex-col overflow-hidden rounded-2xl border bg-[#ecece4] lg:min-h-0 ${over ? "border-foreground" : "border-border"}`}
         onDragOver={(event) => {
           event.preventDefault();
           setOver(true);
@@ -247,8 +221,8 @@ function TryOnStage(dash: DashboardProps) {
           else if (event.dataTransfer.files?.length) dash.onAddPhotos(event.dataTransfer.files);
         }}
       >
-        {status === "running" && <GlowLoad active startedAt={dash.vtoStartedAt} label="RENDERING" />}
-        {status !== "running" && dash.makeupBusy && <GlowLoad active startedAt={dash.makeupStartedAt} label="MAKEUP" />}
+        {status === "running" && <GlowLoad active className="min-h-0 flex-1" startedAt={dash.vtoStartedAt} label="RENDERING" />}
+        {status !== "running" && dash.makeupBusy && <GlowLoad active className="min-h-0 flex-1" startedAt={dash.makeupStartedAt} label="MAKEUP" />}
         {status === "error" && (
           <div className="p-8 text-center">
             <p className="text-sm font-medium">Needs another take</p>
@@ -266,20 +240,22 @@ function TryOnStage(dash: DashboardProps) {
             leftLabel={showingMakeup ? "OUTFIT" : "YOUR PHOTO"}
             rightLabel={showingMakeup ? "OUTFIT + MAKEUP" : "TRY-ON"}
             onPosition={setCompare}
-            className="w-full"
+            className="h-full w-full min-h-0"
           />
         )}
         {status === "idle" &&
           (dash.originalUrl ? (
-            <img src={dash.originalUrl} alt="Photo that will be dressed" className="mx-auto block h-auto max-h-[28rem] w-full object-contain object-top" />
+            <img src={dash.originalUrl} alt="Photo that will be dressed" className="mx-auto block h-full w-full object-contain object-top" />
           ) : (
-            <div className="px-6 py-20 text-center">
-              <p className="text-sm font-medium">No photo yet</p>
-              <p className="mt-2 text-sm text-muted-foreground">Add one in step 1. One person, facing forward, face and shoulders in frame.</p>
+            <div className="flex flex-1 items-center justify-center px-6 py-12 text-center">
+              <div>
+                <p className="text-sm font-medium">No photo yet</p>
+                <p className="mt-2 text-sm text-muted-foreground">Add one in step 1. One person, facing forward, face and shoulders in frame.</p>
+              </div>
             </div>
           ))}
       </div>
-      <div className="mt-4 flex flex-wrap items-center gap-2">
+      <div className="mt-3 flex shrink-0 flex-wrap items-center gap-2">
         <PrimaryButton disabled={!dash.selectedPlan || dash.vtoRunning || !dash.originalUrl} onClick={dash.onTryOn}>
           {!dash.originalUrl
             ? "Add a photo first"
@@ -316,36 +292,27 @@ export function CanvasDashboard(dash: DashboardProps) {
           ? "Drag the slider to compare. Makeup is optional."
           : "Pick a look, then try it on this photo. Ask the stylist if you want ranked picks.";
 
-  useEffect(() => {
-    if (!dash.solutions.some((item) => item.status === "open")) return;
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    document.getElementById("step-look")?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
-  }, [dash.solutions]);
-
   return (
-    <div className="min-h-[calc(100svh-3.5rem)] bg-background pb-28">
-      <div className="mx-auto max-w-6xl px-4 pt-8 sm:px-8">
-        <p className="font-mono text-[10px] tracking-[0.16em] text-muted-foreground">STUDIO</p>
-        <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-xl">
-            <h1 className="text-3xl tracking-[-0.8px] text-foreground sm:text-4xl">See the look. Plan the wear.</h1>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{nextCopy}</p>
-          </div>
+    <div className="bg-background lg:h-[calc(100svh-3.5rem)] lg:overflow-hidden">
+      <div className="mx-auto flex h-full max-w-[1600px] flex-col px-4 pt-4 pb-32 sm:px-5">
+        <header className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm leading-relaxed text-muted-foreground">{nextCopy}</p>
           <StepRail photoReady={photoReady} lookReady={lookReady} onYou={onYou} />
-        </div>
+        </header>
 
-        <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] lg:items-start">
-          <aside className="space-y-8 lg:sticky lg:top-20">
-            <section id="step-photo" className="scroll-mt-20">
+        <div className="mt-4 grid min-h-0 flex-1 gap-4 lg:grid-cols-[15rem_minmax(0,1.15fr)_minmax(0,0.95fr)] lg:grid-rows-[minmax(0,1fr)]">
+          <aside className="flex min-h-0 flex-col gap-4 lg:overflow-auto">
+            <section id="step-photo" className="flex min-h-0 flex-1 flex-col">
               <p className="font-mono text-[10px] tracking-[0.16em] text-muted-foreground">01 PHOTO</p>
-              <h2 className="mt-1 text-lg font-medium tracking-[-0.3px]">Who gets dressed.</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <h2 className="mt-1 text-base font-medium tracking-[-0.3px]">Who gets dressed.</h2>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                 {dash.mode === "example" && dash.photos.length === 0
                   ? "Example photo is in use. Add yours to dress yourself."
                   : "One person, facing forward, whole face and shoulders visible."}
               </p>
-              <div className="mt-3">
+              <div className="mt-2 flex min-h-0 flex-1 flex-col">
                 <PhotoStudio
+                  compact
                   photos={dash.photos}
                   selectedId={dash.selectedPhotoId}
                   error={dash.uploadError}
@@ -357,9 +324,9 @@ export function CanvasDashboard(dash: DashboardProps) {
               </div>
             </section>
 
-            <section id="step-day" className="scroll-mt-20">
+            <section id="step-day" className="shrink-0">
               <p className="font-mono text-[10px] tracking-[0.16em] text-muted-foreground">02 DAY</p>
-              <h2 className="mt-1 text-lg font-medium tracking-[-0.3px]">The day you actually have.</h2>
+              <h2 className="mt-1 text-base font-medium tracking-[-0.3px]">The day you actually have.</h2>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{dayLine(dash.context)}</p>
               <GhostButton className="mt-3 min-h-10 px-4 py-2 text-xs" onClick={() => setBriefOpen((value) => !value)} aria-expanded={briefOpen}>
                 {briefOpen ? "Hide day controls" : "Edit day"}
@@ -453,17 +420,13 @@ export function CanvasDashboard(dash: DashboardProps) {
             </section>
           </aside>
 
-          <div className="space-y-10">
-            <LookPicker
-              plans={dash.plans}
-              selectedPlan={dash.selectedPlan}
-              solutions={dash.solutions}
-              onSelectPlan={dash.onSelectPlan}
-              onAcceptSolution={dash.onAcceptSolution}
-              onDismissSolution={dash.onDismissSolution}
-            />
-            <TryOnStage {...dash} />
-          </div>
+          <LookPicker
+            plans={dash.plans}
+            selectedPlan={dash.selectedPlan}
+            solutions={dash.solutions}
+            onSelectPlan={dash.onSelectPlan}
+          />
+          <TryOnStage {...dash} />
         </div>
       </div>
     </div>

@@ -7,10 +7,12 @@ export function GlowLoad({
   active,
   startedAt,
   label = "RENDERING",
+  className = "aspect-[4/5] min-h-[240px]",
 }: {
   active: boolean;
   startedAt?: number;
   label?: string;
+  className?: string;
 }) {
   const [pct, setPct] = useState(3);
 
@@ -33,7 +35,7 @@ export function GlowLoad({
   }, [active, startedAt]);
 
   return (
-    <div className="relative aspect-[4/5] min-h-[240px] overflow-hidden rounded-xl bg-[#1a1a14]" aria-live="polite" aria-busy="true">
+    <div className={`relative overflow-hidden rounded-xl bg-[#1a1a14] ${className}`} aria-live="polite" aria-busy="true">
       <ImageIcon className="absolute top-3 left-3 size-4 text-[#fbfbf9]/55" aria-hidden="true" />
       <p className="absolute top-3 right-3 font-mono text-[11px] tracking-[0.08em] text-[#fbfbf9]/70">{pct}%</p>
       <div className="absolute inset-0 grid place-items-center">

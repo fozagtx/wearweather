@@ -392,6 +392,19 @@ export default function Home() {
           <AgentDock
             context={context}
             onContext={setContext}
+            solutions={solutions}
+            selectedPlan={selectedPlan}
+            onSelectPlan={setSelectedPlan}
+            canTryOn={hasSource}
+            busy={Boolean(activeRequestId)}
+            onAcceptSolution={(solution) => {
+              setSolutions((current) =>
+                current.map((item) =>
+                  item.id === solution.id ? { ...item, status: "accepted" } : item.status === "open" ? { ...item, status: "dismissed" } : item,
+                ),
+              );
+              void startVto(solution.plan);
+            }}
             onSolutions={(note, nextPlans) => {
               setSolutions(solutionsFromPlans(note, nextPlans));
             }}

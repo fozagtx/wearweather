@@ -14,6 +14,7 @@ export function PhotoStudio({
   onAdd,
   onSelect,
   onRemove,
+  compact = false,
 }: {
   photos: StudioPhoto[];
   selectedId?: string;
@@ -22,9 +23,14 @@ export function PhotoStudio({
   onAdd: (files: FileList | null) => void;
   onSelect: (id: string) => void;
   onRemove: (id: string) => void;
+  compact?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
+
+  const imageClass = compact
+    ? "block h-full max-h-none w-full object-contain object-top"
+    : "block h-auto max-h-none w-full object-contain object-top";
 
   const takeFiles = (event: React.DragEvent) => {
     event.preventDefault();
@@ -33,7 +39,7 @@ export function PhotoStudio({
   };
 
   return (
-    <div>
+    <div className={compact ? "flex min-h-0 flex-1 flex-col" : undefined}>
       <input
         ref={inputRef}
         className="sr-only"
@@ -46,7 +52,7 @@ export function PhotoStudio({
         }}
       />
       <div
-        className={`rounded-xl border border-dashed p-2 ${over ? "border-foreground bg-muted/80" : "border-border bg-muted/40"}`}
+        className={`min-h-0 rounded-xl border border-dashed p-2 ${compact ? "flex-1" : ""} ${over ? "border-foreground bg-muted/80" : "border-border bg-muted/40"}`}
         onDragOver={(event) => {
           event.preventDefault();
           setOver(true);
@@ -73,7 +79,7 @@ export function PhotoStudio({
                     aria-pressed={active}
                     aria-label={active ? `${photo.label}, try-on source` : `Use ${photo.label}`}
                   >
-                    <img src={photo.url} alt="" className="block h-auto max-h-64 w-full object-contain object-top" draggable={false} />
+                    <img src={photo.url} alt="" className={imageClass} draggable={false} />
                     {active && (
                       <span className="absolute top-2 left-2 rounded-md bg-background/90 px-1.5 py-0.5 font-mono text-[9px] tracking-[0.12em]">
                         IN USE
@@ -97,19 +103,19 @@ export function PhotoStudio({
             })}
           </div>
         ) : examplePhotoUrl ? (
-          <div>
-            <div className="relative">
-              <img src={examplePhotoUrl} alt="Example try-on photo" className="block h-auto max-h-64 w-full rounded-lg object-contain object-top" />
+          <div className={compact ? "flex h-full min-h-0 flex-col" : undefined}>
+            <div className={compact ? "relative min-h-0 flex-1" : "relative"}>
+              <img src={examplePhotoUrl} alt="Example try-on photo" className={`${imageClass} rounded-lg`} />
               <span className="absolute top-2 left-2 rounded-md bg-background/90 px-1.5 py-0.5 font-mono text-[9px] tracking-[0.12em]">
                 EXAMPLE
               </span>
             </div>
-            <p className="px-2 py-3 text-center text-xs leading-relaxed text-muted-foreground">
+            <p className="px-2 py-2 text-center text-xs leading-relaxed text-muted-foreground">
               This example is on the try-on. Add your photo to dress yourself.
             </p>
           </div>
         ) : (
-          <div className="px-3 py-10 text-center">
+          <div className={`px-3 text-center ${compact ? "py-6" : "py-10"}`}>
             <p className="text-sm font-medium">Add a photo</p>
             <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
               Drop a file here, or choose one. One person, facing forward, face and shoulders in frame.
