@@ -141,27 +141,17 @@ function StepRail({
 function LookPicker({
   plans,
   selectedPlan,
-  solutions,
   onSelectPlan,
 }: {
   plans: WearPlan[];
   selectedPlan?: WearPlan;
-  solutions: AgentSolution[];
   onSelectPlan: (plan: WearPlan) => void;
 }) {
-  const openSolutions = solutions.filter((item) => item.status === "open");
-  const solutionFor = (lookId: string) => openSolutions.find((item) => item.plan.lookId === lookId);
-
   return (
     <section id="step-look" className="flex min-h-0 flex-col">
-      <p className="font-mono text-[10px] tracking-[0.16em] text-muted-foreground">03 LOOK</p>
-      <h2 className="mt-1 text-base font-medium tracking-[-0.3px]">
-        {openSolutions.length ? "Stylist picks. Accept in the box below." : "Pick a look."}
-      </h2>
-      <div className="mt-3 grid min-h-0 flex-1 grid-cols-3 gap-2">
+      <div className="grid min-h-0 flex-1 grid-cols-3 gap-2">
         {plans.map((plan) => {
           const active = selectedPlan?.lookId === plan.lookId;
-          const solution = solutionFor(plan.lookId);
           return (
             <button
               key={plan.lookId}
@@ -175,9 +165,7 @@ function LookPicker({
               <div className="min-h-40 flex-1 bg-[#ecece4] lg:min-h-0">
                 <img src={plan.sourceImageUrl} alt="" className="mx-auto block h-full w-full object-contain object-top" />
               </div>
-              <p className="mt-2 font-mono text-[10px] tracking-[0.12em] text-muted-foreground">0{plan.rank}</p>
-              <p className="mt-0.5 text-sm font-medium leading-snug">{plan.title}</p>
-              {solution && <p className="mt-1 text-[11px] text-brand">Stylist pick</p>}
+              <p className="mt-2 text-sm font-medium leading-snug">{plan.title}</p>
             </button>
           );
         })}
@@ -204,10 +192,8 @@ function TryOnStage(dash: DashboardProps) {
 
   return (
     <section id="step-you" className="flex min-h-0 flex-col">
-      <p className="font-mono text-[10px] tracking-[0.16em] text-muted-foreground">04 ON YOU</p>
-      <h2 className="mt-1 text-base font-medium tracking-[-0.3px]">See it on this photo.</h2>
       <div
-        className={`mt-3 flex min-h-64 flex-1 flex-col overflow-hidden rounded-2xl border bg-[#ecece4] lg:min-h-0 ${over ? "border-foreground" : "border-border"}`}
+        className={`flex min-h-64 flex-1 flex-col overflow-hidden rounded-2xl border bg-[#ecece4] lg:min-h-0 ${over ? "border-foreground" : "border-border"}`}
         onDragOver={(event) => {
           event.preventDefault();
           setOver(true);
@@ -247,11 +233,8 @@ function TryOnStage(dash: DashboardProps) {
           (dash.originalUrl ? (
             <img src={dash.originalUrl} alt="Photo that will be dressed" className="mx-auto block h-full w-full object-contain object-top" />
           ) : (
-            <div className="flex flex-1 items-center justify-center px-6 py-12 text-center">
-              <div>
-                <p className="text-sm font-medium">No photo yet</p>
-                <p className="mt-2 text-sm text-muted-foreground">Add one in step 1. One person, facing forward, face and shoulders in frame.</p>
-              </div>
+            <div className="flex flex-1 items-center justify-center px-6 text-center">
+              <p className="text-sm text-muted-foreground">Add a photo</p>
             </div>
           ))}
       </div>
@@ -262,7 +245,7 @@ function TryOnStage(dash: DashboardProps) {
             : dash.vtoRunning
               ? "Dressing this photo…"
               : dash.selectedPlan
-                ? `Try ${dash.selectedPlan.title} on me`
+                ? `Try on`
                 : "Pick a look first"}
         </PrimaryButton>
         {dash.resultUrl && (dash.context.makeupFinish || dash.context.makeupPrompt.trim()) && (
@@ -271,7 +254,6 @@ function TryOnStage(dash: DashboardProps) {
           </GhostButton>
         )}
       </div>
-      {dash.slow && dash.vtoRunning && <p className="mt-2 text-xs text-muted-foreground">Still rendering. You can wait here.</p>}
       {dash.makeupError && <p className="mt-2 text-xs text-[#c43b3e]">{dash.errorMessages[dash.makeupError] || dash.errorMessages.UNEXPECTED_ERROR}</p>}
     </section>
   );
@@ -282,35 +264,18 @@ export function CanvasDashboard(dash: DashboardProps) {
   const photoReady = Boolean(dash.originalUrl);
   const lookReady = Boolean(dash.selectedPlan);
   const onYou = Boolean(dash.resultUrl);
-  const nextCopy = !photoReady
-    ? "Start here: add a photo, or keep the example."
-    : dash.vtoRunning
-      ? "YouCam is dressing this photo."
-      : dash.taskError
-        ? "Try-on missed. Retry, or pick another look."
-        : dash.resultUrl
-          ? "Drag the slider to compare. Makeup is optional."
-          : "Pick a look, then try it on this photo. Ask the stylist if you want ranked picks.";
 
   return (
     <div className="bg-background lg:h-[calc(100svh-3.5rem)] lg:overflow-hidden">
-      <div className="mx-auto flex h-full max-w-[1600px] flex-col px-4 pt-4 pb-32 sm:px-5">
-        <header className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm leading-relaxed text-muted-foreground">{nextCopy}</p>
+      <div className="mx-auto flex h-full max-w-[1600px] flex-col px-4 pt-3 pb-28 sm:px-5">
+        <header className="flex shrink-0 justify-end">
           <StepRail photoReady={photoReady} lookReady={lookReady} onYou={onYou} />
         </header>
 
-        <div className="mt-4 grid min-h-0 flex-1 gap-4 lg:grid-cols-[15rem_minmax(0,1.15fr)_minmax(0,0.95fr)] lg:grid-rows-[minmax(0,1fr)]">
+        <div className="mt-3 grid min-h-0 flex-1 gap-4 lg:grid-cols-[15rem_minmax(0,1.15fr)_minmax(0,0.95fr)] lg:grid-rows-[minmax(0,1fr)]">
           <aside className="flex min-h-0 flex-col gap-4 lg:overflow-auto">
             <section id="step-photo" className="flex min-h-0 flex-1 flex-col">
-              <p className="font-mono text-[10px] tracking-[0.16em] text-muted-foreground">01 PHOTO</p>
-              <h2 className="mt-1 text-base font-medium tracking-[-0.3px]">Who gets dressed.</h2>
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                {dash.mode === "example" && dash.photos.length === 0
-                  ? "Example photo is in use. Add yours to dress yourself."
-                  : "One person, facing forward, whole face and shoulders visible."}
-              </p>
-              <div className="mt-2 flex min-h-0 flex-1 flex-col">
+              <div className="flex min-h-0 flex-1 flex-col">
                 <PhotoStudio
                   compact
                   photos={dash.photos}
@@ -325,11 +290,9 @@ export function CanvasDashboard(dash: DashboardProps) {
             </section>
 
             <section id="step-day" className="shrink-0">
-              <p className="font-mono text-[10px] tracking-[0.16em] text-muted-foreground">02 DAY</p>
-              <h2 className="mt-1 text-base font-medium tracking-[-0.3px]">The day you actually have.</h2>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{dayLine(dash.context)}</p>
-              <GhostButton className="mt-3 min-h-10 px-4 py-2 text-xs" onClick={() => setBriefOpen((value) => !value)} aria-expanded={briefOpen}>
-                {briefOpen ? "Hide day controls" : "Edit day"}
+              <p className="text-sm leading-relaxed text-muted-foreground">{dayLine(dash.context)}</p>
+              <GhostButton className="mt-2 min-h-10 px-4 py-2 text-xs" onClick={() => setBriefOpen((value) => !value)} aria-expanded={briefOpen}>
+                {briefOpen ? "Hide day" : "Edit day"}
               </GhostButton>
               {briefOpen && (
                 <div className="mt-4 space-y-4 rounded-2xl border border-border bg-card p-4">
@@ -420,12 +383,7 @@ export function CanvasDashboard(dash: DashboardProps) {
             </section>
           </aside>
 
-          <LookPicker
-            plans={dash.plans}
-            selectedPlan={dash.selectedPlan}
-            solutions={dash.solutions}
-            onSelectPlan={dash.onSelectPlan}
-          />
+          <LookPicker plans={dash.plans} selectedPlan={dash.selectedPlan} onSelectPlan={dash.onSelectPlan} />
           <TryOnStage {...dash} />
         </div>
       </div>

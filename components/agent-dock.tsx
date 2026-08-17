@@ -84,7 +84,7 @@ export function AgentDock({
         if (!output.plans?.length) continue;
         onContext(output.context);
         onSolutions(output.note, output.plans, output.context);
-        setOpen(true);
+        setOpen(false);
         onSelectPlan?.(output.plans[0]);
       }
     }
@@ -110,59 +110,40 @@ export function AgentDock({
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
       <div className="pointer-events-auto w-full max-w-3xl overflow-hidden rounded-3xl border border-border bg-card shadow-[0_16px_40px_rgba(26,26,20,0.12)]">
-        <button
-          type="button"
-          className="flex w-full min-h-11 items-center justify-between px-4 py-2 text-left"
-          onClick={() => setOpen((value) => !value)}
-        >
-          <span>
-            <span className="block font-mono text-[10px] tracking-[0.16em] text-muted-foreground">STYLIST</span>
-            <span className="text-sm font-medium">Ask what to wear</span>
-          </span>
-          <span className="text-xs text-muted-foreground">{open ? "Hide tips" : "Show tips"}</span>
-        </button>
         {(open || messages.length > 0 || errorText) && (
-          <div className="max-h-40 space-y-2 overflow-auto border-t border-border px-4 py-3 text-[13px] leading-relaxed">
+          <div className="max-h-36 space-y-2 overflow-auto px-4 py-3 text-[13px] leading-relaxed">
             {open && messages.length === 0 && (
-              <div className="space-y-3">
-                <p className="text-muted-foreground">
-                  Say the day in plain words. Ranked looks land in step 3. Accept appears in this box. That starts try-on.
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {prompts.map((prompt) => (
-                    <button
-                      key={prompt}
-                      type="button"
-                      className="min-h-10 rounded-full border border-border px-3 py-2 text-left text-[11px] leading-snug text-muted-foreground hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      onClick={() => {
-                        if (status === "streaming" || status === "submitted") return;
-                        setOpen(true);
-                        sendMessage({ text: prompt });
-                      }}
-                    >
-                      {prompt}
-                    </button>
-                  ))}
-                </div>
+              <div className="flex flex-wrap gap-1.5">
+                {prompts.map((prompt) => (
+                  <button
+                    key={prompt}
+                    type="button"
+                    className="min-h-10 rounded-full border border-border px-3 py-2 text-left text-[11px] leading-snug text-muted-foreground hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    onClick={() => {
+                      if (status === "streaming" || status === "submitted") return;
+                      setOpen(true);
+                      sendMessage({ text: prompt });
+                    }}
+                  >
+                    {prompt}
+                  </button>
+                ))}
               </div>
             )}
             {messages.map((message) => (
               <div key={message.id}>
-                <p className="font-mono text-[10px] tracking-[0.14em] text-muted-foreground">
-                  {message.role === "user" ? "YOU" : "STYLIST"}
-                </p>
                 {message.parts.map((part, index) => {
                   if (part.type === "text" && part.text.trim()) {
                     return (
-                      <p key={`${message.id}-${index}`} className="mt-0.5">
+                      <p key={`${message.id}-${index}`}>
                         {part.text}
                       </p>
                     );
                   }
-                  if (isProposeTool(part)) {
+                  if (isProposeTool(part) && part.state !== "output-available") {
                     return (
-                      <p key={part.toolCallId} className="mt-0.5 text-muted-foreground">
-                        {part.state === "output-available" ? "Looks are ready. Accept in the box to try one on." : "Choosing looks…"}
+                      <p key={part.toolCallId} className="text-muted-foreground">
+                        Choosing looks…
                       </p>
                     );
                   }
@@ -175,12 +156,12 @@ export function AgentDock({
           </div>
         )}
         <form
-          className="flex gap-2 border-t border-border p-3"
+          className="flex gap-2 p-3"
           onSubmit={(event) => {
             event.preventDefault();
             const text = input.trim();
             if (!text || status === "streaming" || status === "submitted") return;
-            setOpen(true);
+            setOpen(false);
             sendMessage({ text });
             setInput("");
           }}
@@ -211,6 +192,13 @@ export function AgentDock({
               </PrimaryButton>
             )}
           </div>
+          <button
+            type="button"
+            className="min-h-10 px-2 text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            onClick={() => setOpen((value) => !value)}
+          >
+            {open ? "Hide" : "Tips"}
+          </button>
           <PrimaryButton className="min-h-10 px-3 py-2 text-xs" disabled={status === "streaming" || status === "submitted" || !input.trim()} type="submit">
             {status === "streaming" || status === "submitted" ? "…" : "Ask"}
           </PrimaryButton>

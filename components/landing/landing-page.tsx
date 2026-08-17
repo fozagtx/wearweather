@@ -196,20 +196,6 @@ export function LandingPage({
             <p className="mt-4 max-w-md text-base leading-relaxed text-muted-foreground">
               Rank three looks for the day you actually have, then try one on a photo before you buy.
             </p>
-            <ol className="mt-5 max-w-md space-y-2 text-sm leading-relaxed text-muted-foreground">
-              <li>
-                <span className="font-mono text-[10px] tracking-[0.14em] text-foreground">01</span> Add a photo, or keep the example.
-              </li>
-              <li>
-                <span className="font-mono text-[10px] tracking-[0.14em] text-foreground">02</span> Tell the day, or ask the stylist.
-              </li>
-              <li>
-                <span className="font-mono text-[10px] tracking-[0.14em] text-foreground">03</span> Pick a look.
-              </li>
-              <li>
-                <span className="font-mono text-[10px] tracking-[0.14em] text-foreground">04</span> Try it on the photo.
-              </li>
-            </ol>
             <div className="mt-5 flex flex-wrap gap-3">
               <PrimaryButton onClick={onExample}>Rehearse the example day</PrimaryButton>
               <GhostButton onClick={onUpload}>Start with my photo</GhostButton>

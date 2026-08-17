@@ -86,13 +86,15 @@ export function PhotoStudio({
                       </span>
                     )}
                   </button>
-                  <div className="mt-2 flex items-center gap-2">
-                    <GhostButton className="h-10 min-h-10 px-3 py-0 text-xs" onClick={() => onSelect(photo.id)} disabled={active}>
-                      {active ? "This photo is in use" : "Use this photo"}
-                    </GhostButton>
+                  <div className="mt-2">
+                    {!active && (
+                      <GhostButton className="h-10 min-h-10 px-3 py-0 text-xs" onClick={() => onSelect(photo.id)}>
+                        Use this photo
+                      </GhostButton>
+                    )}
                     <button
                       type="button"
-                      className="text-[11px] text-muted-foreground hover:text-foreground"
+                      className="ml-2 text-[11px] text-muted-foreground hover:text-foreground"
                       onClick={() => onRemove(photo.id)}
                     >
                       Remove
@@ -110,16 +112,10 @@ export function PhotoStudio({
                 EXAMPLE
               </span>
             </div>
-            <p className="px-2 py-2 text-center text-xs leading-relaxed text-muted-foreground">
-              This example is on the try-on. Add your photo to dress yourself.
-            </p>
           </div>
         ) : (
-          <div className={`px-3 text-center ${compact ? "py-6" : "py-10"}`}>
-            <p className="text-sm font-medium">Add a photo</p>
-            <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-              Drop a file here, or choose one. One person, facing forward, face and shoulders in frame.
-            </p>
+          <div className={`grid place-items-center px-3 text-center ${compact ? "h-full py-4" : "py-10"}`}>
+            <p className="text-sm text-muted-foreground">Add a photo</p>
           </div>
         )}
       </div>
