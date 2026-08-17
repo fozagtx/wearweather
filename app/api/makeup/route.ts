@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { getLookById } from "@/lib/catalogue";
 import { recommendMakeup, type LookTemplate, type MakeupPlan } from "@/lib/makeup-engine";
-import { MAX_TASKS, addTaskMapping, taskCount } from "@/lib/task-cookie";
+import { addTaskMapping } from "@/lib/task-cookie";
 import { isValidContext, validatePhoto } from "@/lib/validation";
 import { createLookTask, createMakeupTask, listLookTemplates, mapYouCamError } from "@/lib/youcam";
 
@@ -71,13 +71,6 @@ export async function POST(request: Request) {
     }
     const look = getLookById(lookId);
     if (!look) return NextResponse.json({ code: "REFERENCE_INVALID", correlationId }, { status: 400 });
-    if ((await taskCount()) >= MAX_TASKS) {
-      return NextResponse.json(
-        { code: "TASK_FAILED", correlationId, message: "This demo session has reached its task limit. Reset the session to begin again." },
-        { status: 429 },
-      );
-    }
-
     const plan = await resolvePlan(context, templateId);
     const photoFile = photo instanceof File ? photo : undefined;
     let started: { providerTaskId: string; kind: "look" | "makeup" };
@@ -94,6 +87,7 @@ export async function POST(request: Request) {
   } catch (error) {
     const code = mapYouCamError(error);
     console.error(JSON.stringify({ event: "makeup_failed", correlationId, code }));
-    return NextResponse.json({ code, correlationId }, { status: code === "SERVICE_UNAVAILABLE" ? 503 : 502 });
+    const status = code === "RATE_LIMITED" ? 429 : code === "SERVICE_UNAVAILABLE" ? 503 : 502;
+    return NextResponse.json({ code, correlationId }, { status });
   }
 }

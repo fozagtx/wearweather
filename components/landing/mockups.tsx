@@ -48,23 +48,31 @@ function TrafficLights() {
   );
 }
 
-function WindowChrome({ title, children }: { title: string; children: React.ReactNode }) {
+function WindowChrome({
+  title,
+  children,
+  hug = false,
+}: {
+  title: string;
+  children: React.ReactNode;
+  hug?: boolean;
+}) {
   return (
     <div
-      className="w-full overflow-hidden border bg-[var(--preview-sidebar)] shadow-[0_24px_80px_rgba(26,26,20,0.12)]"
+      className={`flex w-full flex-col overflow-hidden border bg-[var(--preview-sidebar)] shadow-[0_8px_28px_rgba(26,26,20,0.08)] ${hug ? "" : "h-full max-h-full"}`}
       style={{
         borderColor: "var(--preview-border)",
         borderRadius: "var(--mockup-shell-radius)",
       }}
     >
-      <div className="flex h-9 items-center border-b" style={{ borderColor: "var(--preview-border)" }}>
+      <div className="flex h-9 shrink-0 items-center border-b" style={{ borderColor: "var(--preview-border)" }}>
         <TrafficLights />
         <div className="ml-1 flex items-center gap-2 text-[11px] text-[var(--preview-muted-foreground)]">
-          <WwLogo className="size-3.5" />
+          <WwLogo className="size-4" />
           <span className="font-medium text-foreground/80">{title}</span>
         </div>
       </div>
-      {children}
+      <div className={hug ? "" : "min-h-0 flex-1 overflow-hidden"}>{children}</div>
     </div>
   );
 }
@@ -110,42 +118,18 @@ export function HeroBoard() {
   }, [reduced, paused, plans.length, index]);
 
   return (
-    <WindowChrome title="Example brief · live ranking">
+    <WindowChrome title="Example brief · live ranking" hug>
       <div
         className="text-left"
         onMouseEnter={() => setPaused(true)}
         onMouseLeave={() => setPaused(false)}
       >
-        <div className="px-3 pt-3 sm:px-4 sm:pt-4">
-          <p className="font-mono text-[10px] tracking-[0.5px] text-[var(--preview-muted-foreground)]">
-            Same engine as the app · {getActiveCatalogue().length} catalogue looks · top 3
-          </p>
-          <div className="mt-2">
-            <BriefStrip context={exampleBrief} />
-          </div>
-        </div>
-        <div className="relative mx-3 mt-3 overflow-hidden rounded-[var(--mockup-inner-radius)] border bg-muted sm:mx-4" style={{ borderColor: "var(--preview-border)" }}>
-          <div className="relative aspect-[4/5] min-h-[280px] w-full sm:aspect-[5/6] sm:min-h-[360px]">
-            {plans.map((item, slide) => (
-              <div
-                key={item.planId}
-                className="absolute inset-0"
-                style={{
-                  transform: `translateX(${(slide - index) * 100}%)`,
-                  transition: reduced ? "none" : "transform 0.55s var(--ease-out)",
-                }}
-              >
-                <Image
-                  src={item.sourceImageUrl}
-                  alt={item.title}
-                  fill
-                  priority={slide === 0}
-                  sizes="(min-width: 1024px) 560px, 100vw"
-                  className="object-cover"
-                />
-              </div>
-            ))}
-          </div>
+        <div className="relative flex max-h-[calc(100svh-16rem)] items-start justify-center bg-[#ecece4]">
+          <img
+            src={plan.sourceImageUrl}
+            alt={plan.title}
+            className="max-h-[calc(100svh-16rem)] w-full object-contain object-top"
+          />
           <span className="absolute top-3 left-3 rounded-md border border-white/20 bg-background/85 px-2 py-1 font-mono text-[10px]">
             0{plan.rank} / 03
           </span>
@@ -155,17 +139,14 @@ export function HeroBoard() {
             </span>
           )}
         </div>
-        <div className="flex items-end justify-between gap-4 px-3 py-4 sm:px-4">
+        <div className="flex items-start justify-between gap-4 px-3 py-3 sm:px-4">
           <div className="min-w-0">
             <p className="text-[15px] font-medium tracking-[-0.3px]">{plan.title}</p>
-            <p className="mt-1 truncate font-mono text-[10px] text-[var(--preview-muted-foreground)]">
+            <p className="mt-0.5 font-mono text-[10px] leading-snug text-[var(--preview-muted-foreground)]">
               {plan.garmentMetadataSummary.join(" · ")}
             </p>
-            <p className="mt-2 line-clamp-2 text-[12px] leading-snug text-[var(--preview-muted-foreground)]">
-              {plan.reasons[0]}
-            </p>
           </div>
-          <div className="flex shrink-0 gap-1.5 pb-1" role="tablist" aria-label="Ranked looks">
+          <div className="flex shrink-0 gap-1.5" role="tablist" aria-label="Ranked looks">
             {plans.map((item, slide) => (
               <button
                 key={item.planId}
@@ -203,7 +184,7 @@ export function BriefTerminal() {
 
   return (
     <WindowChrome title="rankWearPlans(exampleBrief)">
-      <div className="min-h-[280px] p-4 font-mono text-[11px] leading-6 text-[var(--preview-muted-foreground)]">
+      <div className="min-h-[200px] p-3 font-mono text-[11px] leading-6 text-[var(--preview-muted-foreground)]">
         <p className="text-foreground/80">catalogue.json · {getActiveCatalogue().length} active looks</p>
         {lines.slice(0, shown).map((line) => (
           <p key={line}>
@@ -222,15 +203,15 @@ export function PlansBoard() {
   const plans = useMemo(() => rankWearPlans(exampleBrief, 1), []);
   return (
     <WindowChrome title="Three Wear Plans">
-      <div className="grid min-h-[280px] grid-cols-1 gap-2 p-2 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2 p-2 sm:grid-cols-3">
         {plans.map((plan) => (
           <article
             key={plan.planId}
             className="overflow-hidden rounded-[var(--mockup-inner-radius)] border bg-[var(--preview-card)]"
             style={{ borderColor: "var(--preview-border)" }}
           >
-            <div className="relative h-28 bg-muted">
-              <Image src={plan.sourceImageUrl} alt={plan.title} fill className="object-cover" sizes="200px" />
+            <div className="relative h-20 bg-muted">
+              <img src={plan.sourceImageUrl} alt="" className="h-full w-full object-cover object-top" />
             </div>
             <div className="p-2.5">
               <p className="font-mono text-[9px] text-brand-light">0{plan.rank}</p>
@@ -258,12 +239,12 @@ export function TryOnDetail() {
 
   return (
     <WindowChrome title="Source photo · catalogue reference">
-      <div className="flex min-h-[300px]">
+      <div className="flex">
         <div className="min-w-0 flex-1 p-3">
-          <div className="relative h-48 overflow-hidden rounded-[var(--mockup-inner-radius)] border border-border bg-muted">
-            <img src={plan.sourceImageUrl} alt={`Catalogue reference: ${plan.title}`} className="h-full w-full object-cover" />
+          <div className="relative h-36 overflow-hidden rounded-[var(--mockup-inner-radius)] border border-border bg-muted">
+            <img src={plan.sourceImageUrl} alt={`Catalogue reference: ${plan.title}`} className="h-full w-full object-cover object-top" />
             <div className="absolute inset-y-0 left-0 overflow-hidden border-r border-white/70" style={{ width: `${pos}%` }}>
-              <img src={examplePhotoUrl} alt="Example source photo" className="h-full w-[620px] max-w-none object-cover" />
+              <img src={examplePhotoUrl} alt="Example source photo" className="h-full w-[620px] max-w-none object-cover object-top" />
             </div>
             <div className="absolute top-2 left-2 rounded bg-background/80 px-1.5 py-0.5 font-mono text-[9px]">EXAMPLE PHOTO</div>
             <div className="absolute top-2 right-2 rounded bg-background/80 px-1.5 py-0.5 font-mono text-[9px]">CATALOGUE STILL</div>
@@ -292,7 +273,7 @@ export function MakeupBoard() {
   const plan = useMemo(() => recommendMakeup(exampleBrief, []), []);
   return (
     <WindowChrome title="Makeup finish · example brief">
-      <div className="min-h-[280px] p-4 text-left">
+      <div className="p-3 text-left">
         <p className="font-mono text-[10px] tracking-[0.5px] text-[var(--preview-muted-foreground)]">
           Same brief as the outfit · YouCam Look VTO
         </p>
@@ -316,7 +297,7 @@ export function MakeupBoard() {
           ))}
         </div>
         <p className="mt-5 text-[10px] leading-relaxed text-[var(--preview-muted-foreground)]">
-          Opt in on the brief. We do not infer gender from the photo. Virtual makeup is a visualisation, not a product match.
+          Opt in on the brief. We do not infer gender from the photo. Virtual makeup is a visualization, not a product match.
         </p>
       </div>
     </WindowChrome>
@@ -333,7 +314,7 @@ export function PriorityModal() {
 
   return (
     <WindowChrome title="Your priorities">
-      <div className="min-h-[300px] p-4 text-left">
+      <div className="p-3 text-left">
         <p className="text-sm font-medium">What should the plan respect?</p>
         <p className="mt-1 text-xs text-[var(--preview-muted-foreground)]">
           Choose one to three. These are the five chips in the app.
@@ -365,7 +346,7 @@ export function PriorityModal() {
 export function SessionPreview() {
   return (
     <WindowChrome title="Use my photo">
-      <div className="min-h-[280px] p-4 text-left text-xs leading-relaxed">
+      <div className="p-3 text-left text-xs leading-relaxed">
         <p className="text-sm font-medium">Your image stays in this session.</p>
         <div className="mt-3 rounded-lg border border-brand/30 border-l-[3px] border-l-brand bg-brand/10 p-3 text-[var(--preview-muted-foreground)]">
           Used only to create a virtual outfit rendering for this session. WearWeather does not assess body, health, or worth. Reset deletes the session.
@@ -374,7 +355,7 @@ export function SessionPreview() {
         <p className="mt-1 text-[var(--preview-muted-foreground)]">
           One person, facing forward, standing. Face and shoulders visible. JPG or PNG, 10 MB max.
         </p>
-        <div className="mt-4 grid place-items-center rounded-lg border border-dashed border-foreground/20 py-8 text-[var(--preview-muted-foreground)]">
+        <div className="mt-4 grid place-items-center rounded-lg border border-dashed border-foreground/20 py-5 text-[var(--preview-muted-foreground)]">
           Choose a JPG or PNG
         </div>
       </div>
@@ -392,11 +373,11 @@ export function MockupStage({
   children: React.ReactNode;
 }) {
   return (
-    <div className="relative w-full overflow-hidden sm:min-h-[300px] lg:aspect-4/3">
-      <Image src={src} alt={alt} fill className="object-cover" sizes="(min-width: 1280px) 620px, 100vw" />
+    <div className="relative h-full min-h-[18rem] overflow-hidden rounded-[var(--mockup-shell-radius)] bg-card lg:absolute lg:inset-0 lg:min-h-0">
+      <Image src={src} alt={alt} fill className="object-cover object-top" sizes="(min-width: 1024px) 480px, 100vw" />
       <div className="absolute inset-0 bg-background/35" />
-      <div className="relative flex min-h-[300px] items-center justify-center p-4 sm:min-h-[340px] lg:absolute lg:inset-0">
-        <div className="w-full max-w-[620px]">{children}</div>
+      <div className="relative flex h-full items-center justify-center overflow-hidden p-3">
+        <div className="h-full w-full max-w-[400px] overflow-hidden">{children}</div>
       </div>
     </div>
   );

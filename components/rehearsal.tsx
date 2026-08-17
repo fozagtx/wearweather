@@ -3,11 +3,17 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { MakeupPlan } from "@/lib/makeup-engine";
 import { contextLabels, preferenceLabels, type PreferenceId, type WearContext, type WearPlan } from "@/lib/types";
-import { Eyebrow, GhostButton, PrimaryButton } from "@/components/ui";
+import { CompareCanvas } from "@/components/compare-canvas";
+import { Eyebrow, GhostButton, PrimaryButton, RetailerLink } from "@/components/ui";
 
 export function StepRail({ current }: { current: string }) {
   const steps = ["Set the day", "Choose a plan", "Rehearse the look"];
-  const active = current === "context" ? 0 : current === "plans" || current === "detail" ? 1 : 2;
+  const active =
+    current === "context" || current === "preferences" || current === "upload"
+      ? 0
+      : current === "plans" || current === "detail"
+        ? 1
+        : 2;
   return (
     <div className="mx-auto mb-8 flex max-w-[900px] flex-col gap-3 sm:mb-10 sm:flex-row sm:items-center sm:gap-5" aria-label="Progress">
       <Eyebrow className="whitespace-nowrap">Your rehearsal</Eyebrow>
@@ -140,7 +146,7 @@ function ChoiceGroup<T extends string>({
       <legend className="mb-3 text-[13px] font-semibold">{label}</legend>
       <div className="flex flex-wrap gap-2">
         {options.map((option) => (
-          <label key={option} className="relative">
+          <label key={option} className="relative cursor-pointer">
             <input
               type="radio"
               className="sr-only"
@@ -217,6 +223,43 @@ export function ContextForm({
           onChange={(formality) => onChange({ ...context, formality })}
         />
         <div>
+          <label htmlFor="look-prompt" className="mb-3 block text-[13px] font-semibold">
+            What fashion are you after?
+          </label>
+          <textarea
+            id="look-prompt"
+            value={context.lookPrompt}
+            maxLength={280}
+            rows={3}
+            placeholder="Street tailoring, a quiet luxury blazer, navy suit, summer column, oversized shirt..."
+            className="w-full rounded-2xl border border-border bg-background px-3.5 py-3 text-sm leading-relaxed outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            onChange={(event) => onChange({ ...context, lookPrompt: event.target.value })}
+          />
+          <p className="mt-2 text-xs text-muted-foreground">Optional. The shortlist moves toward this note, not a generic example look.</p>
+        </div>
+        <div>
+          <label htmlFor="makeup-prompt" className="mb-3 block text-[13px] font-semibold">
+            Any makeup you want?
+          </label>
+          <textarea
+            id="makeup-prompt"
+            value={context.makeupPrompt}
+            maxLength={280}
+            rows={3}
+            placeholder="Soft glam, smoky eye, red lip, glass skin, natural no-makeup..."
+            className="w-full rounded-2xl border border-border bg-background px-3.5 py-3 text-sm leading-relaxed outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            onChange={(event) => {
+              const makeupPrompt = event.target.value;
+              onChange({
+                ...context,
+                makeupPrompt,
+                makeupFinish: makeupPrompt.trim().length > 0 ? true : context.makeupFinish,
+              });
+            }}
+          />
+          <p className="mt-2 text-xs text-muted-foreground">Optional. We match a YouCam look template and effects to this note. We do not infer gender from your photo.</p>
+        </div>
+        <div>
           <ChoiceGroup
             label="Want a makeup finish with this look?"
             value={context.makeupFinish ? "yes" : "no"}
@@ -225,7 +268,7 @@ export function ContextForm({
             onChange={(value) => onChange({ ...context, makeupFinish: value === "yes" })}
           />
           <p className="mt-2.5 max-w-[520px] text-xs leading-relaxed text-muted-foreground">
-            Optional. Anyone can opt in. WearWeather does not infer gender from your photo. It ranks a YouCam look against the same brief as the outfit.
+            Optional. Anyone can opt in. A makeup note above turns this on. WearWeather does not infer gender from your photo.
           </p>
         </div>
       </div>
@@ -276,7 +319,9 @@ function PreferenceChips({
           );
         })}
       </div>
-      {selected.length === 0 && <p className="mt-3.5 text-xs text-muted-foreground">Choose at least one priority to see your three plans.</p>}
+      {selected.length === 0 && (
+        <p className="mt-3.5 text-xs text-muted-foreground">Optional. Skip if your fashion note already says enough.</p>
+      )}
       {selected.length === 3 && <p className="mt-3.5 text-xs text-muted-foreground">Three priorities selected. Remove one to choose a different priority.</p>}
     </div>
   );
@@ -306,7 +351,7 @@ export function PreferencesForm({
       <PreferenceChips selected={context.preferences} onChange={(preferences) => onChange({ ...context, preferences })} />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <GhostButton onClick={onBack}>← Back</GhostButton>
-        <PrimaryButton disabled={!context.preferences.length} onClick={onContinue}>
+        <PrimaryButton onClick={onContinue}>
           Show my three plans →
         </PrimaryButton>
       </div>
@@ -338,7 +383,7 @@ export function PlansView({
           <Eyebrow>Three Wear Plans</Eyebrow>
           <h2 className="mt-3 text-3xl font-medium tracking-[-0.5px] sm:text-5xl">Shortlist, not scroll fatigue.</h2>
           <p className="mt-3 max-w-[500px] text-sm leading-relaxed text-muted-foreground">
-            Each option is matched to your brief using catalogue facts and your chosen priorities.
+            Each option is matched to your brief{context.lookPrompt.trim() ? ` and your note: “${context.lookPrompt.trim()}”` : ""} using catalogue facts.
           </p>
         </div>
         <GhostButton className="h-10 min-h-10 px-3.5 py-0" onClick={onBack}>
@@ -371,8 +416,8 @@ export function PlansView({
               plan.rank === 1 ? "border-brand/60 shadow-[0_0_0_1px_rgba(210,86,17,0.16)]" : "border-border"
             }`}
           >
-            <div className="relative h-[290px] overflow-hidden bg-muted">
-              <img src={plan.sourceImageUrl} alt={`Reference outfit: ${plan.title}`} className="h-full w-full object-cover" />
+            <div className="relative max-h-[28rem] overflow-hidden bg-muted">
+              <img src={plan.sourceImageUrl} alt={`Reference outfit: ${plan.title}`} className="mx-auto block h-auto max-h-[28rem] w-full object-contain object-top" />
               <span className="absolute top-3 left-3 rounded-lg border border-white/20 bg-background/85 px-2 py-1.5 font-mono text-[10px]">
                 0{plan.rank}
               </span>
@@ -395,18 +440,11 @@ export function PlansView({
                 <span className="mb-1.5 block font-mono text-[10px] tracking-[0.5px] text-brand-light">Check before buying</span>
                 {plan.checkBeforeBuying}
               </div>
-              <div className="mt-5 flex items-center justify-between gap-2">
+              <div className="mt-5 flex flex-col items-start gap-1">
                 <PrimaryButton className="h-10 min-h-10 px-3.5 py-0 text-[11px]" onClick={() => onSelect(plan)}>
-                  Try this look →
+                  Open this plan →
                 </PrimaryButton>
-                <a
-                  className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
-                  href={plan.productUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  View item ↗
-                </a>
+                <RetailerLink href={plan.productUrl} compact className="min-h-9 text-[11px]" />
               </div>
             </div>
           </article>
@@ -437,34 +475,43 @@ export function DetailView({
   plan,
   onBack,
   onTry,
-  onViewItem,
   saved,
   onSave,
+  userPhotoUrl,
 }: {
   plan: WearPlan;
   onBack: () => void;
   onTry: () => void;
-  onViewItem: () => void;
   saved: boolean;
   onSave: () => void;
+  userPhotoUrl?: string;
 }) {
   return (
     <section className="mx-auto grid max-w-[1100px] grid-cols-1 gap-8 xl:grid-cols-[minmax(0,0.95fr)_minmax(330px,0.9fr)] xl:gap-14">
       <button type="button" className="justify-self-start text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground xl:col-span-2" onClick={onBack}>
         ← Back to plans
       </button>
-      <div className="relative h-[470px] overflow-hidden rounded-[9px] border border-border bg-muted xl:h-[650px]">
-        <img src={plan.sourceImageUrl} alt={`Complete look reference for ${plan.title}`} className="h-full w-full object-cover" />
+      <div className="relative overflow-hidden rounded-[9px] border border-border bg-muted">
+        <img src={plan.sourceImageUrl} alt={`Complete look reference for ${plan.title}`} className="block h-auto w-full" />
         <span className="absolute bottom-4 left-4 rounded-md border border-border bg-background/85 px-2.5 py-2 font-mono text-[10px] tracking-[0.5px]">
           REFERENCE LOOK / {String(plan.rank).padStart(2, "0")}
         </span>
+        {userPhotoUrl && (
+          <div className="absolute top-4 right-4 overflow-hidden rounded-md border border-border bg-background/90">
+            <img src={userPhotoUrl} alt="Your selected try-on photo" className="h-28 w-20 object-cover" />
+            <p className="px-2 py-1 font-mono text-[9px] tracking-[0.4px]">YOUR PHOTO</p>
+          </div>
+        )}
       </div>
       <div>
         <Eyebrow>Plan {String(plan.rank).padStart(2, "0")}</Eyebrow>
         <h2 className="mt-4 text-5xl font-medium tracking-[-0.5px] sm:text-6xl">{plan.title}</h2>
-        <h3 className="mt-4 mb-6 text-base font-medium text-muted-foreground">
+        <h3 className="mt-4 mb-3 text-base font-medium text-muted-foreground">
           {plan.rank === 1 ? "Polished, with an exit plan." : "A look built around your actual day."}
         </h3>
+        <p className="mb-6 text-sm leading-relaxed text-muted-foreground">
+          Next: try the look on your photo. Stay on WearWeather until you choose a retailer link on purpose.
+        </p>
         <div className="flex flex-wrap gap-1.5">
           {plan.garmentMetadataSummary.map((item) => (
             <span key={item} className="rounded-full border border-border px-2.5 py-2 font-mono text-[10px] text-muted-foreground">
@@ -488,12 +535,15 @@ export function DetailView({
         </div>
         <div className="mt-7 flex flex-wrap items-center gap-2">
           <PrimaryButton onClick={onTry}>Try this look on me →</PrimaryButton>
-          <GhostButton className={saved ? "border-brand bg-brand text-white" : ""} onClick={onSave}>
-            {saved ? "✓ Plan saved" : "Save this plan"}
+          <GhostButton className={saved ? "border-brand bg-brand text-white" : ""} onClick={onSave} disabled={saved}>
+            {saved ? "Saved in this session" : "Save this plan"}
           </GhostButton>
-          <button type="button" className="px-2 text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground" onClick={onViewItem}>
-            View item ↗
-          </button>
+        </div>
+        <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+          Save keeps the plan in this browser session. It does not open a store, and WearWeather does not send your photo to a retailer.
+        </p>
+        <div className="mt-3">
+          <RetailerLink href={plan.productUrl} />
         </div>
       </div>
     </section>
@@ -524,7 +574,9 @@ export function ProcessingView({
         {error ? "The visual rehearsal needs another take." : "Building your visual rehearsal."}
       </h2>
       <p className="mt-4 max-w-[440px] leading-relaxed text-muted-foreground">
-        {error ? errorMessages[error] || errorMessages.UNEXPECTED_ERROR : "This can take a moment. Keep this page open while we check the task."}
+        {error
+          ? errorMessages[error] || errorMessages.UNEXPECTED_ERROR
+          : "Stay on this page. Your selected photo and the catalogue still go to YouCam cloth-v4. This often takes up to two minutes."}
       </p>
       {slow && !error && <p className="mt-3 text-xs text-brand-light">This is taking longer than expected. You can keep this page open or try again.</p>}
       {error ? (
@@ -621,37 +673,16 @@ export function ResultCompare({
           </button>
         </div>
       )}
-      <div className="compare-frame">
-        <img src={rightSrc} alt={showingMakeup ? "Virtual makeup on the outfit rehearsal" : "Virtual rendering of the selected Wear Plan"} />
-        <div className="compare-original" style={{ width: `${position}%` }}>
-          <img src={leftSrc} alt={showingMakeup ? "Outfit rehearsal without makeup" : "Original source photo"} />
-        </div>
-        <div className="compare-divider" style={{ left: `${position}%` }}>
-          <span className="absolute top-1/2 left-1/2 grid size-8 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-foreground text-lg text-primary-foreground">
-            ↔
-          </span>
-        </div>
-        <label className="sr-only" htmlFor="compare-slider">
-          {showingMakeup ? "Compare outfit rehearsal and makeup finish" : "Compare original photo and virtual rendering"}
-        </label>
-        <input
-          id="compare-slider"
-          className="compare-slider"
-          type="range"
-          min="0"
-          max="100"
-          value={position}
-          onChange={(event) => setPosition(Number(event.target.value))}
-        />
-        <div className="absolute top-4 left-4 rounded-md border border-border bg-background/80 px-2 py-1.5 font-mono text-[10px] tracking-[0.5px]">
-          {leftLabel}
-        </div>
-        <div className="absolute top-4 right-4 rounded-md border border-border bg-background/80 px-2 py-1.5 font-mono text-[10px] tracking-[0.5px]">
-          {rightLabel}
-        </div>
-      </div>
+      <CompareCanvas
+        leftSrc={leftSrc}
+        rightSrc={rightSrc}
+        position={position}
+        leftLabel={leftLabel}
+        rightLabel={rightLabel}
+        onPosition={setPosition}
+      />
       <p className="mt-3.5 mb-6 text-xs leading-relaxed text-muted-foreground">
-        <strong className="text-foreground">Virtual rendering:</strong> this helps you visualise a look. It does not guarantee physical fit, fabric feel, breathability, retailer sizing, or a product-true makeup match.
+        <strong className="text-foreground">Virtual rendering:</strong> this helps you visualize a look. It does not guarantee physical fit, fabric feel, breathability, retailer sizing, or a product-true makeup match.
       </p>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
@@ -725,17 +756,15 @@ export function ResultCompare({
       </div>
       <div className="mt-6 flex flex-wrap justify-end gap-2">
         <GhostButton onClick={onChooseAnother}>Choose another plan</GhostButton>
-        <GhostButton className={saved ? "border-brand bg-brand text-white" : ""} onClick={onSave}>
-          {saved ? "✓ Plan saved" : "Save this plan"}
+        <GhostButton className={saved ? "border-brand bg-brand text-white" : ""} onClick={onSave} disabled={saved}>
+          {saved ? "Saved in this session" : "Save this plan"}
         </GhostButton>
-        <a
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-foreground px-6 py-3 text-sm font-semibold tracking-[-0.5px] text-background transition-opacity hover:opacity-90"
-          href={plan.productUrl}
-          target="_blank"
-          rel="noreferrer"
-        >
-          View item ↗
-        </a>
+      </div>
+      <p className="mt-3 text-right text-xs leading-relaxed text-muted-foreground">
+        Save stays in this browser session. The retailer link below opens a new tab; it is not part of save.
+      </p>
+      <div className="mt-2 flex justify-end">
+        <RetailerLink href={plan.productUrl} />
       </div>
       <button type="button" className="mx-auto mt-6 block text-[11px] text-muted-foreground underline underline-offset-4 hover:text-foreground" onClick={onReset}>
         Delete this session

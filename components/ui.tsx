@@ -10,7 +10,7 @@ export function PrimaryButton({
 }: ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
     <button
-      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-foreground px-6 py-3 text-sm font-semibold tracking-[-0.5px] text-background transition-opacity hover:opacity-90 disabled:opacity-45 ${focus} ${className}`}
+      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-foreground px-5 py-3 text-sm font-semibold tracking-[-0.5px] text-background transition-opacity hover:opacity-90 disabled:opacity-45 ${focus} ${className}`}
       {...props}
     >
       {children}
@@ -25,11 +25,33 @@ export function GhostButton({
 }: ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
     <button
-      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-3xl border border-border bg-background px-5 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted/60 disabled:opacity-45 ${focus} ${className}`}
+      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-border bg-background px-5 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted/60 disabled:opacity-45 ${focus} ${className}`}
       {...props}
     >
       {children}
     </button>
+  );
+}
+
+export function RetailerLink({
+  href,
+  className = "",
+  compact = false,
+}: {
+  href: string;
+  className?: string;
+  compact?: boolean;
+}) {
+  return (
+    <a
+      className={`inline-flex min-h-11 items-center text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground ${focus} ${className}`}
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      title="Opens the retailer website in a new tab. WearWeather does not send your photo."
+    >
+      {compact ? "Retailer page (new tab)" : "Check this look at the retailer (opens a new tab)"}
+    </a>
   );
 }
 
@@ -53,7 +75,7 @@ export function SectionShell({
   return (
     <section
       id={id}
-      className={`relative px-4 py-16 sm:px-8 sm:py-20 lg:px-[30px] lg:py-24 ${className}`}
+      className={`relative px-4 py-12 sm:px-8 sm:py-16 lg:px-[30px] lg:py-20 ${className}`}
     >
       <div className="mx-auto max-w-7xl">{children}</div>
     </section>

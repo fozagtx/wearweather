@@ -1,51 +1,41 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { AgentDock, solutionsFromPlans } from "@/components/agent-dock";
+import { CanvasDashboard } from "@/components/canvas-dashboard";
 import { LandingPage } from "@/components/landing/landing-page";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import {
-  ContextForm,
-  DetailView,
-  PlansView,
-  PreferencesForm,
-  ProcessingView,
-  ResultCompare,
-  StepRail,
-  UploadPanel,
-} from "@/components/rehearsal";
-import { exampleBrief, examplePhotoUrl } from "@/lib/example-brief";
+import { exampleBrief, blankBrief, examplePhotoUrl } from "@/lib/example-brief";
+import { preparePhotoFile } from "@/lib/image-prep";
 import { recommendMakeup, type MakeupPlan } from "@/lib/makeup-engine";
 import { rankWearPlans } from "@/lib/recommendation-engine";
-import { preferenceLabels, type PreferenceId, type WearContext, type WearPlan } from "@/lib/types";
+import { type AgentSolution, type StudioPhoto, type WearContext, type WearPlan } from "@/lib/types";
 const errorMessages: Record<string, string> = {
-  PHOTO_FORMAT_INVALID: "Choose a JPG or PNG image.",
-  PHOTO_TOO_LARGE: "This image is larger than 10 MB. Choose a smaller file.",
+  PHOTO_FORMAT_INVALID: "Use a JPG, PNG, or WebP image.",
+  PHOTO_TOO_LARGE: "This image is larger than 12 MB. Choose a smaller file.",
   PHOTO_GUIDANCE_NEEDED: "Use one clear, front-facing standing photo with your whole face in frame and shoulders visible.",
   REFERENCE_INVALID: "This outfit image is not suitable for try-on. Choose another Wear Plan.",
-  TASK_FAILED: "We could not create this visual rehearsal. Your plan is still saved; please try again.",
-  SERVICE_UNAVAILABLE: "The try-on service is temporarily unavailable. Add a YouCam key and try again shortly.",
+  TASK_FAILED: "We could not create this visual rehearsal. Your plan is still here; please try again.",
+  SERVICE_UNAVAILABLE: "The try-on service is temporarily unavailable. Wait a moment, then try again.",
+  RATE_LIMITED: "YouCam asked us to slow down. Wait a few seconds, then try again. You do not need to leave this page.",
   SESSION_EXPIRED: "This session has expired for privacy. Start a new rehearsal.",
   UNEXPECTED_ERROR: "Something went wrong. No new result was created.",
 };
 
 export default function Home() {
-  const [screen, setScreen] = useState<
-    "start" | "upload" | "context" | "preferences" | "plans" | "detail" | "processing" | "result"
-  >("start");
+  const [screen, setScreen] = useState<"start" | "board">("start");
   const [mode, setMode] = useState<"example" | "upload">("example");
   const [context, setContext] = useState<WearContext>(exampleBrief);
-  const [plans, setPlans] = useState<WearPlan[]>([]);
+  const [plans, setPlans] = useState<WearPlan[]>(() => rankWearPlans(exampleBrief, 1));
   const [selectedPlan, setSelectedPlan] = useState<WearPlan>();
-  const [sourceFile, setSourceFile] = useState<File>();
-  const [sourcePreview, setSourcePreview] = useState<string>();
+  const [photos, setPhotos] = useState<StudioPhoto[]>([]);
+  const [selectedPhotoId, setSelectedPhotoId] = useState<string>();
   const [activeRequestId, setActiveRequestId] = useState<string>();
   const [resultUrl, setResultUrl] = useState<string>();
   const [taskError, setTaskError] = useState<string>();
   const [slow, setSlow] = useState(false);
-  const [revisionNote, setRevisionNote] = useState<string>();
   const [recommendationVersion, setRecommendationVersion] = useState(1);
-  const [saved, setSaved] = useState(false);
   const [uploadError, setUploadError] = useState<string>();
   const [pollStartedAt, setPollStartedAt] = useState<number>();
   const [makeupPlan, setMakeupPlan] = useState<MakeupPlan>(() => recommendMakeup(exampleBrief, []));
@@ -54,53 +44,86 @@ export default function Home() {
   const [makeupBusy, setMakeupBusy] = useState(false);
   const [makeupError, setMakeupError] = useState<string>();
   const [makeupPollStartedAt, setMakeupPollStartedAt] = useState<number>();
+  const [solutions, setSolutions] = useState<AgentSolution[]>([]);
+  const vtoLock = useRef(false);
+  const makeupLock = useRef(false);
 
+  const selectedPhoto = photos.find((photo) => photo.id === selectedPhotoId);
+  const sourceFile = selectedPhoto?.file;
+  const sourcePreview = selectedPhoto?.url;
   const hasSource = mode === "example" || Boolean(sourceFile);
-  const originalUrl = mode === "example" ? examplePhotoUrl : sourcePreview || "";
+  const originalUrl = sourcePreview || (mode === "example" ? examplePhotoUrl : "");
 
-  const createPlans = (nextContext = context, nextVersion = recommendationVersion) => {
-    const ranked = rankWearPlans(nextContext, nextVersion);
+  useEffect(() => {
+    const ranked = rankWearPlans(context, recommendationVersion);
     setPlans(ranked);
-    setSelectedPlan(undefined);
-    setScreen("plans");
-  };
+    setSelectedPlan((current) => ranked.find((plan) => plan.lookId === current?.lookId) || ranked[0]);
+  }, [context, recommendationVersion]);
 
   const startExample = () => {
     setMode("example");
     setContext(exampleBrief);
-    setScreen("context");
+    setScreen("board");
     window.scrollTo(0, 0);
   };
 
   const startUpload = () => {
     setMode("upload");
-    setScreen("upload");
+    setContext(blankBrief);
+    setScreen("board");
     window.scrollTo(0, 0);
   };
 
-  const handleFile = (file?: File) => {
+  const handleAddFiles = async (list: FileList | null) => {
+    if (!list?.length) return;
     setUploadError(undefined);
-    if (!file) return;
-    if (!["image/jpeg", "image/png"].includes(file.type)) return setUploadError("Choose a JPG or PNG image.");
-    if (file.size > 10 * 1024 * 1024) return setUploadError("This image is larger than 10 MB. Choose a smaller file.");
-    if (sourcePreview) URL.revokeObjectURL(sourcePreview);
-    setSourceFile(file);
-    setSourcePreview(URL.createObjectURL(file));
+    const remaining = 8 - photos.length;
+    if (remaining <= 0) {
+      setUploadError("Eight photos max on the board. Remove one to add another.");
+      return;
+    }
+    const added: StudioPhoto[] = [];
+    for (const file of [...list].slice(0, remaining)) {
+      try {
+        const prepared = await preparePhotoFile(file);
+        const index = photos.length + added.length;
+        added.push({
+          id: crypto.randomUUID(),
+          file: prepared,
+          url: URL.createObjectURL(prepared),
+          label: `Photo ${index + 1}`,
+          x: 24 + (index % 4) * 148,
+          y: 24 + Math.floor(index / 4) * 192,
+        });
+      } catch (error) {
+        const code = error instanceof Error ? error.message : "PHOTO_FORMAT_INVALID";
+        setUploadError(code === "PHOTO_TOO_LARGE" ? "That file is larger than 12 MB." : "Use a JPG, PNG, or WebP.");
+      }
+    }
+    if (!added.length) return;
+    setMode("upload");
+    setPhotos((current) => [...current, ...added]);
+    setSelectedPhotoId((current) => current || added[0].id);
   };
 
-  const confirmUpload = () => setScreen("context");
-  const openPlans = () => {
-    if (context.preferences.length) createPlans(context, recommendationVersion);
-    else setScreen("preferences");
+  const removePhoto = (id: string) => {
+    setPhotos((current) => {
+      const next = current.filter((photo) => photo.id !== id);
+      const removed = current.find((photo) => photo.id === id);
+      if (removed) URL.revokeObjectURL(removed.url);
+      return next;
+    });
+    setSelectedPhotoId((current) => (current === id ? photos.find((photo) => photo.id !== id)?.id : current));
   };
-  const selectPlan = (plan: WearPlan) => {
+
+  const startVto = async (plan = selectedPlan) => {
+    if (!plan || !hasSource || vtoLock.current) return;
+    if (mode === "upload" && !sourceFile) {
+      setTaskError("PHOTO_GUIDANCE_NEEDED");
+      return;
+    }
+    vtoLock.current = true;
     setSelectedPlan(plan);
-    setScreen("detail");
-  };
-
-  const startVto = async () => {
-    if (!selectedPlan || !hasSource) return;
-    setScreen("processing");
     setTaskError(undefined);
     setSlow(false);
     setResultUrl(undefined);
@@ -118,7 +141,7 @@ export default function Home() {
       }
       const form = new FormData();
       form.append("photo", file);
-      form.append("lookId", selectedPlan.lookId);
+      form.append("lookId", plan.lookId);
       const response = await fetch("/api/vto", { method: "POST", body: form });
       const body = await response.json();
       if (!response.ok) {
@@ -128,28 +151,32 @@ export default function Home() {
       setActiveRequestId(body.requestId);
     } catch {
       setTaskError("SERVICE_UNAVAILABLE");
+    } finally {
+      vtoLock.current = false;
     }
   };
 
   useEffect(() => {
-    if (!activeRequestId || screen !== "processing") return;
+    if (!activeRequestId) return;
     let cancelled = false;
     const delays = [2000, 3000, 5000];
     let attempt = 0;
     const poll = async () => {
       if (cancelled) return;
       const started = pollStartedAt || Date.now();
-      if (Date.now() - started >= 60000) {
-        setSlow(true);
+      const elapsed = Date.now() - started;
+      if (elapsed >= 120000) {
+        setTaskError("TASK_FAILED");
+        setActiveRequestId(undefined);
         return;
       }
+      if (elapsed >= 40000) setSlow(true);
       try {
         const response = await fetch(`/api/vto-status/${activeRequestId}`, { cache: "no-store" });
         const body = await response.json();
         if (cancelled) return;
-        if (body.status === "success") {
+        if (body.status === "success" && body.resultUrl) {
           setResultUrl(body.resultUrl);
-          setScreen("result");
           setActiveRequestId(undefined);
           return;
         }
@@ -171,7 +198,7 @@ export default function Home() {
     return () => {
       cancelled = true;
     };
-  }, [activeRequestId, screen, pollStartedAt]);
+  }, [activeRequestId, pollStartedAt]);
 
   const sourceAsFile = async () => {
     if (sourceFile) return sourceFile;
@@ -181,7 +208,8 @@ export default function Home() {
   };
 
   const startMakeup = async () => {
-    if (!selectedPlan || !hasSource || !resultUrl) return;
+    if (!selectedPlan || !hasSource || !resultUrl || makeupLock.current) return;
+    makeupLock.current = true;
     setMakeupBusy(true);
     setMakeupError(undefined);
     setMakeupPollStartedAt(Date.now());
@@ -205,11 +233,13 @@ export default function Home() {
     } catch {
       setMakeupError("SERVICE_UNAVAILABLE");
       setMakeupBusy(false);
+    } finally {
+      makeupLock.current = false;
     }
   };
 
   useEffect(() => {
-    if (screen !== "result") return;
+    if (!resultUrl || screen !== "board") return;
     let cancelled = false;
     const load = async () => {
       try {
@@ -228,17 +258,18 @@ export default function Home() {
     return () => {
       cancelled = true;
     };
-  }, [screen, context]);
+  }, [screen, context, resultUrl]);
 
   useEffect(() => {
-    if (!makeupRequestId || screen !== "result") return;
+    if (!makeupRequestId) return;
     let cancelled = false;
     const delays = [2000, 3000, 5000];
     let attempt = 0;
     const poll = async () => {
       if (cancelled) return;
       const started = makeupPollStartedAt || Date.now();
-      if (Date.now() - started >= 60000) {
+      const elapsed = Date.now() - started;
+      if (elapsed >= 120000) {
         setMakeupError("TASK_FAILED");
         setMakeupBusy(false);
         setMakeupRequestId(undefined);
@@ -248,7 +279,7 @@ export default function Home() {
         const response = await fetch(`/api/makeup-status/${makeupRequestId}`, { cache: "no-store" });
         const body = await response.json();
         if (cancelled) return;
-        if (body.status === "success") {
+        if (body.status === "success" && body.resultUrl) {
           setMakeupUrl(body.resultUrl);
           setMakeupBusy(false);
           setMakeupRequestId(undefined);
@@ -281,39 +312,17 @@ export default function Home() {
     startVto();
   };
 
-  const refine = (preference: PreferenceId) => {
-    const already = context.preferences.includes(preference);
-    const nextPreferences = already
-      ? context.preferences
-      : context.preferences.length < 3
-        ? [...context.preferences, preference]
-        : [preference, ...context.preferences.slice(0, 2)];
-    const nextContext = { ...context, preferences: nextPreferences };
-    const nextVersion = recommendationVersion + 1;
-    setContext(nextContext);
-    setRecommendationVersion(nextVersion);
-    setRevisionNote(
-      already
-        ? `You revisited “${preferenceLabels[preference]}”; the same brief is still in view.`
-        : `You added “${preferenceLabels[preference]},” so the shortlist moved around that priority.`,
-    );
-    setMakeupUrl(undefined);
-    setMakeupError(undefined);
-    setMakeupBusy(false);
-    createPlans(nextContext, nextVersion);
-  };
-
   const reset = async () => {
-    if (!window.confirm("Delete this session and its saved plans? This cannot be undone.")) return;
+    if (!window.confirm("Leave this rehearsal and return to the overview? Plans saved in this session will be cleared.")) return;
     await fetch("/api/session", { method: "DELETE" }).catch(() => undefined);
-    if (sourcePreview) URL.revokeObjectURL(sourcePreview);
+    photos.forEach((photo) => URL.revokeObjectURL(photo.url));
     setScreen("start");
     setMode("example");
     setContext(exampleBrief);
     setPlans([]);
     setSelectedPlan(undefined);
-    setSourceFile(undefined);
-    setSourcePreview(undefined);
+    setPhotos([]);
+    setSelectedPhotoId(undefined);
     setActiveRequestId(undefined);
     setResultUrl(undefined);
     setMakeupPlan(recommendMakeup(exampleBrief, []));
@@ -322,9 +331,8 @@ export default function Home() {
     setMakeupBusy(false);
     setMakeupError(undefined);
     setTaskError(undefined);
-    setSaved(false);
-    setRevisionNote(undefined);
     setRecommendationVersion(1);
+    setSolutions([]);
   };
 
   return (
@@ -338,98 +346,54 @@ export default function Home() {
           <SiteFooter />
         </>
       ) : (
-        <main className="min-h-screen bg-background pt-14">
-          <div className="mx-auto max-w-[1320px] px-4 py-10 sm:px-8 lg:px-[30px] lg:py-14">
-            {screen === "upload" && (
-              <UploadPanel
-                onContinue={confirmUpload}
-                onCancel={() => setScreen("start")}
-                preview={sourcePreview}
-                error={uploadError}
-                onFile={handleFile}
-              />
-            )}
-            {(screen === "context" || screen === "preferences") && (
-              <>
-                <StepRail current="context" />
-                {screen === "context" ? (
-                  <ContextForm
-                    context={context}
-                    onChange={setContext}
-                    onContinue={() => setScreen("preferences")}
-                    onBack={() => setScreen(mode === "upload" ? "upload" : "start")}
-                  />
-                ) : (
-                  <PreferencesForm
-                    context={context}
-                    onChange={setContext}
-                    onContinue={openPlans}
-                    onBack={() => setScreen("context")}
-                  />
-                )}
-              </>
-            )}
-            {screen === "plans" && (
-              <>
-                <StepRail current="plans" />
-                {revisionNote && (
-                  <div className="mx-auto mb-5 flex max-w-[1200px] gap-2 text-xs text-brand-light">
-                    <span>↻</span>
-                    {revisionNote}
-                  </div>
-                )}
-                <PlansView
-                  plans={plans}
-                  context={context}
-                  onSelect={selectPlan}
-                  onBack={() => setScreen("context")}
-                  onReset={reset}
-                  onRefine={refine}
-                />
-              </>
-            )}
-            {screen === "detail" && selectedPlan && (
-              <>
-                <StepRail current="detail" />
-                <DetailView
-                  plan={selectedPlan}
-                  onBack={() => setScreen("plans")}
-                  onTry={startVto}
-                  onViewItem={() => window.open(selectedPlan.productUrl, "_blank", "noopener,noreferrer")}
-                  saved={saved}
-                  onSave={() => setSaved(true)}
-                />
-              </>
-            )}
-            {screen === "processing" && (
-              <>
-                <StepRail current="processing" />
-                <ProcessingView error={taskError} slow={slow} onRetry={retry} onBack={() => setScreen("plans")} errorMessages={errorMessages} />
-              </>
-            )}
-            {screen === "result" && selectedPlan && resultUrl && (
-              <>
-                <StepRail current="result" />
-                <ResultCompare
-                  resultUrl={resultUrl}
-                  originalUrl={originalUrl}
-                  plan={selectedPlan}
-                  onRefine={refine}
-                  onChooseAnother={() => setScreen("plans")}
-                  onReset={reset}
-                  saved={saved}
-                  onSave={() => setSaved(true)}
-                  makeupFinish={context.makeupFinish}
-                  makeupPlan={makeupPlan}
-                  makeupUrl={makeupUrl}
-                  makeupBusy={makeupBusy}
-                  makeupError={makeupError}
-                  onTryMakeup={startMakeup}
-                  errorMessages={errorMessages}
-                />
-              </>
-            )}
-          </div>
+        <main className="relative overflow-hidden bg-background pt-14">
+          <CanvasDashboard
+            mode={mode}
+            context={context}
+            onContext={setContext}
+            photos={photos}
+            selectedPhotoId={selectedPhotoId}
+            uploadError={uploadError}
+            examplePhotoUrl={examplePhotoUrl}
+            onAddPhotos={handleAddFiles}
+            onSelectPhoto={setSelectedPhotoId}
+            onRemovePhoto={removePhoto}
+            plans={plans}
+            selectedPlan={selectedPlan}
+            onSelectPlan={setSelectedPlan}
+            originalUrl={originalUrl}
+            resultUrl={resultUrl}
+            taskError={taskError}
+            slow={slow}
+            vtoRunning={Boolean(activeRequestId)}
+            onTryOn={() => startVto()}
+            onRetry={retry}
+            makeupPlan={makeupPlan}
+            makeupUrl={makeupUrl}
+            makeupBusy={makeupBusy}
+            makeupError={makeupError}
+            onTryMakeup={startMakeup}
+            errorMessages={errorMessages}
+            solutions={solutions}
+            onAcceptSolution={(solution) => {
+              setSolutions((current) =>
+                current.map((item) =>
+                  item.id === solution.id ? { ...item, status: "accepted" } : item.status === "open" ? { ...item, status: "dismissed" } : item,
+                ),
+              );
+              void startVto(solution.plan);
+            }}
+            onDismissSolution={(id) => {
+              setSolutions((current) => current.map((item) => (item.id === id ? { ...item, status: "dismissed" } : item)));
+            }}
+          />
+          <AgentDock
+            context={context}
+            onContext={setContext}
+            onSolutions={(note, nextPlans) => {
+              setSolutions(solutionsFromPlans(note, nextPlans));
+            }}
+          />
         </main>
       )}
     </>

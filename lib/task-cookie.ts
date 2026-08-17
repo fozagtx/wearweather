@@ -1,13 +1,19 @@
 import crypto from "node:crypto";
 import { cookies } from "next/headers";
 
-const COOKIE_NAME = "wearweather_tasks";
-export const MAX_TASKS = 6;
-const TTL_SECONDS = 60 * 60 * 24;
-
 export type TaskKind = "clothes" | "look" | "makeup";
 type TaskMapping = { providerTaskId: string; lookId: string; createdAt: number; kind?: TaskKind };
 type CookiePayload = { expiresAt: number; tasks: Record<string, TaskMapping> };
+
+const COOKIE_NAME = "wearweather_tasks";
+export const MAX_TASKS = 12;
+const TASK_TTL_MS = 60 * 60 * 1000;
+const TTL_SECONDS = 60 * 60 * 24;
+
+function prune(tasks: Record<string, TaskMapping>) {
+  const fresh = Object.entries(tasks).filter(([, task]) => Date.now() - task.createdAt < TASK_TTL_MS);
+  return Object.fromEntries(fresh.slice(-MAX_TASKS));
+}
 
 function secret() {
   return process.env.SESSION_COOKIE_SECRET || "wearweather-local-dev-secret-change-me";
@@ -43,9 +49,8 @@ export async function readTaskCookie() {
 export async function addTaskMapping(requestId: string, mapping: TaskMapping) {
   const jar = await cookies();
   const current = decode(jar.get(COOKIE_NAME)?.value);
-  const tasks = { ...current.tasks, [requestId]: mapping };
-  const limited = Object.fromEntries(Object.entries(tasks).slice(-MAX_TASKS));
-  jar.set(COOKIE_NAME, encode({ expiresAt: Math.floor(Date.now() / 1000) + TTL_SECONDS, tasks: limited }), {
+  const tasks = prune({ ...current.tasks, [requestId]: mapping });
+  jar.set(COOKIE_NAME, encode({ expiresAt: Math.floor(Date.now() / 1000) + TTL_SECONDS, tasks }), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -66,5 +71,5 @@ export async function getTaskMapping(requestId: string) {
 
 export async function taskCount() {
   const payload = await readTaskCookie();
-  return Object.keys(payload.tasks).length;
+  return Object.keys(prune(payload.tasks)).length;
 }

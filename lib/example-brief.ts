@@ -8,6 +8,19 @@ export const exampleBrief: WearContext = {
   formality: "business_polished",
   preferences: ["runs_warm", "need_movement"],
   makeupFinish: true,
+  lookPrompt: "",
+  makeupPrompt: "",
+};
+
+export const blankBrief: WearContext = {
+  wearMoment: "workday",
+  temperatureBand: "mild",
+  outdoorDuration: "short",
+  formality: "smart_casual",
+  preferences: [],
+  makeupFinish: false,
+  lookPrompt: "",
+  makeupPrompt: "",
 };
 
 export const examplePhotoUrl = "/catalog/office-dark.jpg";

@@ -1,11 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Image from "next/image";
+import { useMemo, useState, type CSSProperties } from "react";
 import { Plus, X } from "lucide-react";
 import { Eyebrow, GhostButton, PrimaryButton, SectionShell } from "@/components/ui";
 import {
-  BriefStrip,
   BriefTerminal,
   HeroBoard,
   MockupStage,
@@ -82,7 +80,7 @@ const features = [
 const faqs = [
   {
     q: "I already use Pinterest or a retailer try-on. Is this for me?",
-    a: "WearWeather does not replace a tailor, a retailer, or your camera roll. It takes a day brief and returns three explainable plans from a labelled catalogue, then optionally runs YouCam cloth-v4 and Look VTO on one look.",
+    a: "WearWeather does not replace a tailor, a retailer, or your camera roll. It takes a day brief and returns three explainable plans from a labeled catalogue, then optionally runs YouCam cloth-v4 and Look VTO on one look.",
   },
   {
     q: "What is in the catalogue?",
@@ -90,7 +88,7 @@ const faqs = [
   },
   {
     q: "Can I try makeup with the look?",
-    a: "Yes, if you opt in on the brief. After clothes try-on, WearWeather recommends a YouCam Look VTO template scored against the same day, with Makeup VTO effects as fallback. Anyone can opt in; the app does not infer gender from the photo. Virtual makeup is a visualisation, not a product match guarantee.",
+    a: "Yes, if you opt in on the brief. After clothes try-on, WearWeather recommends a YouCam Look VTO template scored against the same day, with Makeup VTO effects as fallback. Anyone can opt in; the app does not infer gender from the photo. Virtual makeup is a visualization, not a product match guarantee.",
   },
   {
     q: "How does ranking work?",
@@ -108,17 +106,17 @@ const faqs = [
 
 function Marquee() {
   return (
-    <section id="the-day" className="overflow-hidden bg-background py-16 sm:py-24">
+    <section id="the-day" className="overflow-hidden bg-background py-12 sm:py-16">
       <h2 className="mx-auto mb-12 max-w-3xl px-4 text-center text-3xl font-semibold tracking-[-0.5px] sm:text-4xl">
         The inputs the planner actually uses.
       </h2>
       <div className="agent-marquee group relative mx-auto max-w-2xl">
-        <div className="agent-marquee__track flex w-max">
+        <div className="agent-marquee__track flex w-max py-2">
           {[0, 1].map((copy) => (
             <ul key={copy} className="flex shrink-0 items-center gap-8 pr-8" aria-hidden={copy === 1}>
               {marquee.map((label) => (
-                <li key={`${copy}-${label}`} className="flex items-center gap-2 whitespace-nowrap font-mono text-sm text-muted-foreground">
-                  <span className="grid size-8 place-items-center rounded-md border border-border bg-card text-xs">
+                <li key={`${copy}-${label}`} className="flex items-center gap-2 whitespace-nowrap font-mono text-sm leading-none text-muted-foreground">
+                  <span className="grid size-8 shrink-0 place-items-center rounded-md border border-border bg-card text-xs leading-none">
                     {label.slice(0, 1)}
                   </span>
                   {label}
@@ -183,45 +181,27 @@ export function LandingPage({
   onUpload: () => void;
 }) {
   const plans = useMemo(() => rankWearPlans(exampleBrief, 1), []);
-  const lookCount = getActiveCatalogue().length;
 
   return (
     <div id="top">
-      <section id="demo" className="relative px-4 pt-24 pb-10 sm:px-8 sm:pt-28 sm:pb-14 lg:px-[30px] lg:pt-32 lg:pb-16">
-        <div className="mx-auto grid max-w-[1600px] items-center gap-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-12 xl:gap-16">
-          <div className="max-w-xl lg:max-w-none">
+      <section id="demo" className="relative px-4 pt-20 pb-10 sm:px-8 lg:px-[30px]">
+        <div className="mx-auto grid max-w-7xl items-start gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-12">
+          <div className="max-w-xl lg:sticky lg:top-24">
             <Eyebrow>See the look. Plan the wear.</Eyebrow>
-            <h1 className="mt-5 text-4xl font-normal tracking-[-0.5px] text-balance sm:text-5xl md:text-6xl lg:text-[4.35rem] lg:leading-[0.96]">
+            <h1 className="mt-3 text-3xl font-normal tracking-[-0.5px] text-balance sm:text-4xl lg:text-[2.75rem] lg:leading-[1.12]">
               Stop guessing outfits.
               <br />
               Start rehearsing the day.
             </h1>
-            <p className="mt-6 max-w-xl text-base leading-8 text-muted-foreground sm:text-xl">
-              Rank {lookCount} labelled looks against weather, commute, and how you move. Then try the outfit, and an optional makeup finish, on your photo.
+            <p className="mt-4 max-w-md text-base leading-relaxed text-muted-foreground">
+              Open a canvas dashboard: photos, fashion/makeup notes, three plans, and live try-on stay on one board. Drag empty space to pan. Scroll the board to zoom.
             </p>
-            <div className="mt-8 flex flex-wrap gap-2 sm:gap-3">
-              <PrimaryButton onClick={onExample}>Try the example brief</PrimaryButton>
-              <GhostButton onClick={onUpload}>Use my photo</GhostButton>
-            </div>
-            <div className="mt-8">
-              <p className="font-mono text-[10px] tracking-[0.5px] text-muted-foreground">LIVE EXAMPLE BRIEF</p>
-              <div className="mt-3">
-                <BriefStrip context={exampleBrief} />
-              </div>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <PrimaryButton onClick={onExample}>Open the canvas</PrimaryButton>
+              <GhostButton onClick={onUpload}>Use my photos</GhostButton>
             </div>
           </div>
-          <div className="relative min-w-0">
-            <div className="pointer-events-none absolute -inset-8 -z-10 hidden overflow-hidden rounded-[18px] opacity-40 lg:block">
-              <Image
-                src="/optimized/hero-background.webp"
-                alt=""
-                fill
-                priority
-                sizes="(min-width: 1024px) 52vw, 100vw"
-                className="object-cover"
-              />
-              <div className="absolute inset-0 bg-background/40" />
-            </div>
+          <div className="min-w-0">
             <HeroBoard />
           </div>
         </div>
@@ -229,29 +209,38 @@ export function LandingPage({
 
       <Marquee />
 
-      <SectionShell id="features">
-        <div className="space-y-20 sm:space-y-24 lg:space-y-32">
-          {features.map((block) => (
-            <div
-              key={block.eyebrow}
-              className="grid grid-cols-1 items-center gap-8 sm:gap-10 xl:grid-cols-2 xl:gap-16"
-            >
-              <div className="space-y-6 xl:order-1">
+      <SectionShell id="features" className="scroll-mt-20">
+        <div className="feature-stack">
+          <div className="feature-stack__copy-col">
+            {features.map((block, index) => (
+              <div
+                key={block.eyebrow}
+                className="feature-stack__copy space-y-4"
+                style={{ ["--i"]: index + 1 } as CSSProperties}
+              >
                 <Eyebrow>{block.eyebrow}</Eyebrow>
-                <h3 className="text-2xl font-medium tracking-[-0.5px] text-balance sm:text-3xl lg:text-4xl">
+                <h3 className="text-2xl font-medium tracking-[-0.5px] text-balance sm:text-3xl">
                   {block.title}
                 </h3>
-                <p className="max-w-[500px] text-base leading-relaxed text-pretty text-muted-foreground sm:text-lg">
+                <p className="max-w-[500px] text-base leading-relaxed text-pretty text-muted-foreground">
                   {block.body}
                 </p>
               </div>
-              <div className="xl:order-2">
+            ))}
+          </div>
+          <div className="feature-stack__card-col">
+            {features.map((block, index) => (
+              <div
+                key={block.eyebrow}
+                className="feature-stack__card relative"
+                style={{ ["--i"]: index + 1, ["--stack"]: index, zIndex: 20 + index } as CSSProperties}
+              >
                 <MockupStage src={block.src} alt={block.alt}>
                   {block.media}
                 </MockupStage>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </SectionShell>
 
@@ -260,11 +249,11 @@ export function LandingPage({
         <p className="mt-4 max-w-3xl text-base leading-relaxed text-muted-foreground sm:text-lg">
           Client meeting, hot + humid, extended commute, business polished, “I run warm” and “I need easy movement”. These three plans are what rankWearPlans returns for that brief.
         </p>
-        <div className="mt-12 grid grid-cols-1 gap-px bg-border md:grid-cols-3">
+        <div className="mt-8 grid grid-cols-1 gap-px bg-border md:grid-cols-3">
           {plans.map((plan) => (
             <article key={plan.planId} className="bg-card">
-              <div className="relative h-56">
-                <Image src={plan.sourceImageUrl} alt={plan.title} fill className="object-cover" sizes="400px" />
+              <div className="flex min-h-[28rem] items-start justify-center bg-[#ecece4]">
+                <img src={plan.sourceImageUrl} alt={plan.title} className="max-h-[32rem] w-full object-contain object-top" />
               </div>
               <div className="p-5">
                 <p className="font-mono text-xs tracking-[0.5px] text-muted-foreground">0{plan.rank} · {plan.title}</p>

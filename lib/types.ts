@@ -18,6 +18,17 @@ export type WearContext = {
   formality: Formality;
   preferences: PreferenceId[];
   makeupFinish: boolean;
+  lookPrompt: string;
+  makeupPrompt: string;
+};
+
+export type StudioPhoto = {
+  id: string;
+  file: File;
+  url: string;
+  label: string;
+  x: number;
+  y: number;
 };
 
 export type LookCatalogRecord = {
@@ -52,6 +63,13 @@ export type WearPlan = {
   productUrl: string;
   sourceImageUrl: string;
   garmentMetadataSummary: string[];
+};
+
+export type AgentSolution = {
+  id: string;
+  note: string;
+  plan: WearPlan;
+  status: "open" | "accepted" | "dismissed";
 };
 
 export type TaskStatus = "running" | "success" | "error";

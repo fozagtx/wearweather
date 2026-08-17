@@ -1,10 +1,5 @@
 import type { LookCatalogRecord, PreferenceId, WearContext, WearPlan } from "./types";
-
-const planTitles = [
-  "The removable polish layer",
-  "The light structured option",
-  "The movement-first alternative",
-];
+import { expandFashionTokens, scoreHaystack } from "./prompt-match";
 
 function hasKnownMovement(look: LookCatalogRecord) {
   return look.movementTags.some((tag) => tag !== "unknown");
@@ -21,7 +16,7 @@ function metadataSummary(look: LookCatalogRecord) {
 
 function reasonForPreference(preference: PreferenceId, look: LookCatalogRecord) {
   if (preference === "runs_warm" && (look.layerWeight === "light" || look.lining === "none")) {
-    return "You selected ‘I run warm’; this plan prioritises lighter construction information.";
+    return "You selected ‘I run warm’; this plan prioritizes lighter construction information.";
   }
   if (preference === "avoid_cling" && look.silhouette.some((value) => ["relaxed", "straight", "loose"].includes(value))) {
     return "You selected ‘I avoid cling’; this plan uses a listed relaxed/straight silhouette.";
@@ -41,6 +36,15 @@ function reasonForPreference(preference: PreferenceId, look: LookCatalogRecord) 
 function scoreLook(look: LookCatalogRecord, context: WearContext) {
   let score = 0;
   const reasons: string[] = [];
+  const promptTokens = expandFashionTokens(context.lookPrompt || "");
+  if (promptTokens.length) {
+    const hay = `${look.title} ${look.composition} ${look.verifiedFacts.join(" ")} ${look.silhouette.join(" ")} ${look.garmentCategory}`;
+    const promptScore = scoreHaystack(hay, promptTokens);
+    if (promptScore) {
+      score += promptScore;
+      reasons.push(`Matched your fashion note: “${context.lookPrompt.trim()}”.`);
+    }
+  }
 
   if (look.formality.includes(context.formality)) {
     score += 4;
@@ -84,7 +88,7 @@ export function rankWearPlans(context: WearContext, recommendationVersion = 1): 
     recommendationVersion,
     lookId: look.id,
     rank: (index + 1) as 1 | 2 | 3,
-    title: planTitles[index],
+    title: look.title,
     reasons,
     checkBeforeBuying: look.preBuyChecks[0],
     productUrl: look.productUrl,

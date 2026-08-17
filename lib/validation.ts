@@ -1,7 +1,7 @@
 import { FORMALITY_LEVELS, OUTDOOR_DURATIONS, PREFERENCES, TEMPERATURE_BANDS, WEAR_MOMENTS, type PreferenceId, type WearContext } from "./types";
 
-const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
-const ALLOWED_TYPES = ["image/jpeg", "image/png"];
+const MAX_PHOTO_BYTES = 12 * 1024 * 1024;
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 export function validatePhoto(file: File) {
   if (!ALLOWED_TYPES.includes(file.type)) return { ok: false as const, code: "PHOTO_FORMAT_INVALID" as const };
@@ -17,9 +17,14 @@ export function isValidContext(value: unknown): value is WearContext {
     typeof context.temperatureBand === "string" && TEMPERATURE_BANDS.includes(context.temperatureBand as WearContext["temperatureBand"]) &&
     typeof context.outdoorDuration === "string" && OUTDOOR_DURATIONS.includes(context.outdoorDuration as WearContext["outdoorDuration"]) &&
     typeof context.formality === "string" && FORMALITY_LEVELS.includes(context.formality as WearContext["formality"]) &&
-    Array.isArray(context.preferences) && context.preferences.length >= 1 && context.preferences.length <= 3 &&
+    Array.isArray(context.preferences) &&
+    context.preferences.length <= 3 &&
     context.preferences.every((preference) => typeof preference === "string" && PREFERENCES.includes(preference as PreferenceId)) &&
-    typeof context.makeupFinish === "boolean"
+    typeof context.makeupFinish === "boolean" &&
+    typeof context.lookPrompt === "string" &&
+    context.lookPrompt.length <= 280 &&
+    typeof context.makeupPrompt === "string" &&
+    context.makeupPrompt.length <= 280
   );
 }
 

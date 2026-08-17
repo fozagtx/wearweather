@@ -1,6 +1,6 @@
 # WearWeather
 
-<img src="public/ww-logo.svg" alt="WearWeather" width="48" height="48">
+<img src="public/ww-logo.png" alt="WearWeather" width="32" height="32">
 
 **See the look. Plan the wear.**
 
@@ -10,9 +10,9 @@ The picture is a rehearsal, not a promise. It does not guarantee fit, fabric fee
 
 ## What it does
 
-1. You describe the day: what you’re dressing for, how it feels outside, how long you’ll be outdoors, and how polished you need to look.
+1. You describe the day: what you’re dressing for, how it feels outside, how long you’ll be outdoors, and how polished you need to look. You can type that to the canvas stylist instead of filling the brief by hand.
 2. You pick up to three priorities in your own words: I run warm, I need easy movement, I prefer coverage.
-3. You get three Wear Plans, each with reasons tied to that brief, not a feed.
+3. You get three Wear Plans, plus stylist cards on the canvas when you ask. Accept a card to try that look on.
 4. You try one look on a photo (an example, or your own).
 5. If you opt in, you get a makeup recommendation for that same day, and you can try it on the outfit rehearsal.
 
@@ -21,7 +21,7 @@ WearWeather does not guess your gender from the photo. Makeup is opt-in. It does
 ## How it works
 
 ```text
-                    labelled catalogue
+                    labeled catalogue
                             |
                             v
   day brief  ------->  rank 3 Wear Plans  ------->  pick one look
@@ -46,15 +46,18 @@ WearWeather does not guess your gender from the photo. Makeup is opt-in. It does
 
 | Piece | Role |
 | --- | --- |
-| Catalogue | Labelled looks. Unknown facts never become a plus. |
+| Catalogue | Labeled looks. Unknown facts never become a plus. |
 | Ranking | Runs in the browser against the brief. |
+| Stylist | DeepSeek V4 on the canvas. It ranks the same catalogue and drops Accept cards. |
 | Clothes try-on | YouCam puts the chosen look on the photo. |
 | Makeup | YouCam Look templates first, custom makeup if that fails. |
 | Photo | Stays in the browser until you start try-on. No account. |
 
 ## Try it
 
-Use the live site, or run it locally:
+Live: [https://trywearweather.vercel.app](https://trywearweather.vercel.app)
+
+Or run it locally:
 
 ```bash
 pnpm install
@@ -62,7 +65,7 @@ cp .env.example .env.local
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Ranking works immediately. Putting the look on a photo needs a YouCam key in `.env.local` as `YOUCAM_API_KEY`.
+Open [http://localhost:3000](http://localhost:3000). Ranking works immediately. Putting the look on a photo needs `YOUCAM_API_KEY`. The canvas stylist needs `DEEPSEEK_API_KEY` (DeepSeek V4). Optional: `DEEPSEEK_MODEL=deepseek-v4-flash` or `deepseek-v4-pro`.
 
 **Try the example brief** uses a seeded client-meeting day (hot and humid, long commute, business polished). **Use my photo** keeps the file in the browser until you choose to try a look on.
 
@@ -71,7 +74,7 @@ Open [http://localhost:3000](http://localhost:3000). Ranking works immediately. 
 - One person, facing forward, whole face and shoulders visible. JPG or PNG, under 10 MB.
 - No account. Reset deletes the session.
 - Your photo is used only to create that rehearsal. The app does not keep a photo library.
-- Catalogue looks are labelled editorial references. Check the item and the seller before you buy.
+- Catalogue looks are labeled editorial references. Check the item and the seller before you buy.
 
 ## License
 

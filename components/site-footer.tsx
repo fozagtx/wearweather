@@ -34,7 +34,7 @@ export function SiteFooter() {
           <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.75fr)]">
             <div>
               <a href="#top" className="mb-8 inline-flex items-center gap-2 text-sm font-medium">
-                <WwLogo className="size-7" />
+                <WwLogo className="size-8" />
                 WearWeather
               </a>
               <p className="halftone-slogan hidden text-4xl font-semibold leading-[1.08] tracking-[-0.04em] sm:block">

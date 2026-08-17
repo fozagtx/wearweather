@@ -24,7 +24,7 @@ async function providerJson(url: string, init: RequestInit) {
   });
   const body = await response.json().catch(() => null);
   if (!response.ok) {
-    const code = body?.error_code || body?.data?.error || `HTTP_${response.status}`;
+    const code = body?.error_code || body?.error || body?.data?.error || `HTTP_${response.status}`;
     throw new Error(`YOUCAM_${code}`);
   }
   return body;
@@ -53,6 +53,11 @@ async function readReferenceImage(sourceImageUrl: string) {
   return Buffer.from(await response.arrayBuffer());
 }
 
+function toYouCamGarment(category: GarmentCategory) {
+  if (category === "outerwear") return "upper_body";
+  return category;
+}
+
 export async function createClothesTask(input: { sourceFile: File; referenceImageUrl: string; referenceName: string; garmentCategory: GarmentCategory }) {
   const sourceBytes = await input.sourceFile.arrayBuffer();
   const referenceBytes = await readReferenceImage(input.referenceImageUrl);
@@ -63,25 +68,29 @@ export async function createClothesTask(input: { sourceFile: File; referenceImag
   await putFile(referenceUpload, referenceBytes.buffer.slice(referenceBytes.byteOffset, referenceBytes.byteOffset + referenceBytes.byteLength));
   const body = await providerJson(`${baseUrl()}/s2s/v2.0/task/cloth-v4`, {
     method: "POST",
-    body: JSON.stringify({ src_file_id: sourceUpload.fileId, ref_file_id: referenceUpload.fileId, garment_category: input.garmentCategory }),
+    body: JSON.stringify({ src_file_id: sourceUpload.fileId, ref_file_id: referenceUpload.fileId, garment_category: toYouCamGarment(input.garmentCategory) }),
   });
   const providerTaskId = body?.data?.task_id;
   if (!providerTaskId) throw new Error("YOUCAM_TASK_RESPONSE_INVALID");
   return { providerTaskId };
 }
 
-export async function getClothesTask(providerTaskId: string) {
-  const body = await providerJson(`${baseUrl()}/s2s/v2.0/task/cloth-v4/${encodeURIComponent(providerTaskId)}`, { method: "GET" });
-  const taskStatus = body?.data?.task_status;
-  if (taskStatus === "success") return { status: "success" as const, resultUrl: body?.data?.results?.url as string | undefined };
-  if (taskStatus === "error" || body?.data?.error) return { status: "error" as const, providerErrorCode: body?.data?.error || "TASK_FAILED" };
-  return { status: "running" as const };
-}
-
 function extractResultUrl(data: { results?: unknown }) {
   const results = data?.results as { url?: string; download_url?: string } | { url?: string; download_url?: string }[] | undefined;
   if (Array.isArray(results)) return results[0]?.download_url || results[0]?.url;
   return results?.url || results?.download_url;
+}
+
+export async function getClothesTask(providerTaskId: string) {
+  const body = await providerJson(`${baseUrl()}/s2s/v2.0/task/cloth-v4/${encodeURIComponent(providerTaskId)}`, { method: "GET" });
+  const taskStatus = body?.data?.task_status;
+  if (taskStatus === "success") {
+    const resultUrl = extractResultUrl(body?.data);
+    if (!resultUrl) return { status: "running" as const };
+    return { status: "success" as const, resultUrl };
+  }
+  if (taskStatus === "error" || body?.data?.error) return { status: "error" as const, providerErrorCode: body?.data?.error || "TASK_FAILED" };
+  return { status: "running" as const };
 }
 
 export type LookTemplate = { id: string; thumb?: string; title: string; category_name: string };
@@ -183,6 +192,13 @@ export function mapYouCamError(error: unknown) {
     return "PHOTO_GUIDANCE_NEEDED" as const;
   }
   if (message.includes("error_invalid_ref") || message.includes("REFERENCE")) return "REFERENCE_INVALID" as const;
+  if (message.includes("InvalidApiKey") || message.includes("InvalidAccessToken") || message.includes("HTTP_401")) {
+    return "SERVICE_UNAVAILABLE" as const;
+  }
+  if (message.includes("HTTP_429") || message.includes("TooMany") || message.includes("rate_limit") || message.includes("RATE_LIMIT")) {
+    return "RATE_LIMITED" as const;
+  }
+  if (message.includes("invalid_parameter") || message.includes("YOUCAM_UPLOAD")) return "TASK_FAILED" as const;
   if (message.includes("HTTP_5") || message.includes("fetch")) return "SERVICE_UNAVAILABLE" as const;
   return "TASK_FAILED" as const;
 }

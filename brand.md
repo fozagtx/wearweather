@@ -30,4 +30,4 @@ See the look. Plan the wear. A visual rehearsal for the day you actually have.
 
 ## Logo
 
-Pixel-art sun in a collar — weather + clothing — at `/ww-logo.svg`.
+Pixel-art sun in a collar. Weather plus clothing. File: `/ww-logo.png`.

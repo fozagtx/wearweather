@@ -1,4 +1,5 @@
 import { contextLabels, type WearContext } from "./types";
+import { expandMakeupTokens, scoreHaystack } from "./prompt-match";
 
 export type LookTemplate = {
   id: string;
@@ -27,6 +28,9 @@ const FALLBACK_TEMPLATE_ID = "all_rosy_chic";
 type FinishKind = "meeting" | "sheer" | "evening";
 
 function finishKind(context: WearContext): FinishKind {
+  const prompt = (context.makeupPrompt || "").toLowerCase();
+  if (/smoky|glam|evening|red lip|bold|berry|night|party/.test(prompt)) return "evening";
+  if (/natural|sheer|nude|glass|fresh|soft|no makeup/.test(prompt)) return "sheer";
   if (context.formality === "formal" || context.wearMoment === "long_event") return "evening";
   if (context.temperatureBand === "hot_humid" || context.formality === "smart_casual") return "sheer";
   return "meeting";
@@ -125,20 +129,28 @@ function scoreTemplate(template: LookTemplate, keywords: string[], context: Wear
 
 export function recommendMakeup(context: WearContext, templates: LookTemplate[]): MakeupPlan {
   const chosen = profile(context);
+  const promptTokens = expandMakeupTokens(context.makeupPrompt || "");
   const ranked = [...templates]
-    .map((template) => ({ template, score: scoreTemplate(template, chosen.keywords, context) }))
+    .map((template) => {
+      const hay = `${template.title} ${template.category_name} ${template.id}`;
+      const promptScore = scoreHaystack(hay, promptTokens);
+      return { template, score: scoreTemplate(template, chosen.keywords, context) + promptScore };
+    })
     .sort((a, b) => b.score - a.score || a.template.id.localeCompare(b.template.id));
 
-  const bestMatch = ranked[0]?.score ? ranked[0].template : undefined;
+  const bestMatch = ranked[0]?.template;
   const fallback = templates.find((template) => template.id === FALLBACK_TEMPLATE_ID);
   const selected = bestMatch || fallback || templates[0];
+  const promptNote = context.makeupPrompt.trim()
+    ? [`Your makeup note: “${context.makeupPrompt.trim()}”.`]
+    : [];
 
   return {
     title: selected?.title || chosen.title,
     templateId: selected?.id || FALLBACK_TEMPLATE_ID,
     category: selected?.category_name || chosen.category,
     thumb: selected?.thumb,
-    reasons: chosen.reasons,
+    reasons: [...promptNote, ...chosen.reasons].slice(0, 3),
     effects: chosen.effects,
     swatches: chosen.swatches,
     source: selected ? "look-vto" : "makeup-vto-fallback",

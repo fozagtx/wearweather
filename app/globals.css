@@ -1,7 +1,5 @@
 @import "tailwindcss";
 
-@import "tailwindcss";
-
 :root {
   --background: #fbfbf9;
   --foreground: #1a1a14;
@@ -67,6 +65,7 @@
 
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: 4.5rem;
   color-scheme: light;
 }
 
@@ -141,6 +140,7 @@ button, a, input, textarea {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center top;
 }
 
 .compare-original {
@@ -151,10 +151,11 @@ button, a, input, textarea {
 }
 
 .compare-original img {
-  width: 1100px;
+  width: 100%;
   max-width: none;
   height: 100%;
   object-fit: cover;
+  object-position: center top;
 }
 
 .compare-divider {
@@ -176,6 +177,75 @@ button, a, input, textarea {
   cursor: ew-resize;
 }
 
+.feature-stack {
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+
+.feature-stack__copy-col,
+.feature-stack__card-col {
+  display: contents;
+}
+
+.feature-stack__copy {
+  grid-row: calc(var(--i) * 2 - 1);
+  padding-bottom: 0.75rem;
+}
+
+.feature-stack__card {
+  grid-row: calc(var(--i) * 2);
+  margin-bottom: 2.5rem;
+  overflow: hidden;
+  border-radius: var(--mockup-shell-radius);
+}
+
+@media (min-width: 1024px) {
+  .feature-stack {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+    column-gap: 2.5rem;
+    align-items: start;
+  }
+
+  .feature-stack__copy-col,
+  .feature-stack__card-col {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .feature-stack__copy {
+    grid-row: auto;
+    position: sticky;
+    top: 5.5rem;
+    z-index: calc(1 + var(--i, 1));
+    height: min(32rem, calc(100svh - 7rem));
+    margin-bottom: 42vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-block: 0;
+    background: var(--background);
+  }
+
+  .feature-stack__card {
+    grid-row: auto;
+    position: sticky;
+    top: calc(5.5rem + (var(--stack, 0) * 14px));
+    z-index: calc(10 + var(--stack, 0));
+    height: min(32rem, calc(100svh - 7rem));
+    margin-bottom: 42vh;
+    overflow: hidden;
+    box-shadow: 0 12px 40px rgba(26, 26, 20, 0.1);
+  }
+
+  .feature-stack__copy:last-child,
+  .feature-stack__card:last-child {
+    margin-bottom: 18vh;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .agent-marquee { display: none; }
@@ -184,4 +254,92 @@ button, a, input, textarea {
   .caret {
     animation: none !important;
   }
+}
+
+.ww-flow {
+  --xy-background-color: #f3f3ee;
+  --xy-node-border-radius: 16px;
+  background: #f3f3ee;
+}
+
+.ww-flow .react-flow__renderer,
+.ww-flow .react-flow__container {
+  overflow: hidden;
+}
+
+.ww-flow .react-flow__pane {
+  cursor: grab;
+}
+
+.ww-flow .react-flow__pane:active {
+  cursor: grabbing;
+}
+
+.ww-flow .react-flow__node {
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  cursor: grab;
+  height: auto !important;
+}
+
+.ww-flow .react-flow__node > * {
+  width: 100%;
+  height: auto;
+}
+
+.ww-flow .react-flow__edge-path {
+  stroke: #c4c4b4;
+  stroke-width: 1.5;
+}
+
+.ww-flow .react-flow__connection-line {
+  stroke: #1a1a14;
+}
+
+.ww-flow .react-flow__node.dragging {
+  cursor: grabbing;
+}
+
+.ww-flow .react-flow__node.selected > * > section,
+.ww-flow .react-flow__node.selected > section {
+  box-shadow: 0 0 0 1px rgba(26, 26, 20, 0.18), 0 18px 40px rgba(26, 26, 20, 0.08);
+}
+
+.ww-flow .react-flow__handle.ww-handle {
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid #1a1a14;
+  background: #fff;
+}
+
+.ww-flow .react-flow__node:focus,
+.ww-flow .react-flow__node:focus-visible {
+  outline: none;
+}
+
+.ww-flow .react-flow__controls {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(26, 26, 20, 0.06);
+}
+
+.ww-flow .react-flow__controls-button {
+  width: 36px;
+  height: 36px;
+  border-bottom-color: var(--border);
+  background: var(--card);
+}
+
+.ww-flow .react-flow__controls-button:hover {
+  background: var(--muted);
+}
+
+.ww-flow .react-flow__attribution {
+  font-size: 10px;
+  background: transparent;
+  color: var(--muted-foreground);
 }

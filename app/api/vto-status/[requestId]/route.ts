@@ -23,6 +23,7 @@ export async function GET(_request: Request, context: { params: Promise<{ reques
   } catch (error) {
     const code = mapYouCamError(error);
     console.error(JSON.stringify({ event: "vto_status_failed", requestId, code }));
+    if (code === "RATE_LIMITED") return NextResponse.json({ status: "running" });
     return NextResponse.json({ status: "error", code }, { status: code === "SERVICE_UNAVAILABLE" ? 503 : 502 });
   }
 }
