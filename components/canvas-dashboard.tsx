@@ -554,7 +554,7 @@ function FlowBoard({ value }: { value: DashboardProps }) {
 
   return (
     <DashCtx.Provider value={value}>
-      <div ref={shellRef} className="ww-flow h-[calc(100svh-3.5rem)] w-full">
+      <div ref={shellRef} className="ww-flow h-[calc(100svh-3.5rem)] w-full overflow-visible">
         <ReactFlow
           nodes={nodes}
           edges={edges}

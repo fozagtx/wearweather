@@ -260,15 +260,17 @@ button, a, input, textarea {
   --xy-background-color: #f3f3ee;
   --xy-node-border-radius: 16px;
   background: #f3f3ee;
-}
-
-.ww-flow .react-flow__renderer,
-.ww-flow .react-flow__container {
   overflow: visible;
 }
 
-.ww-flow .react-flow {
-  overflow: hidden;
+.ww-flow .react-flow,
+.ww-flow .react-flow__renderer,
+.ww-flow .react-flow__viewport,
+.ww-flow .react-flow__container,
+.ww-flow .react-flow__pane,
+.ww-flow .react-flow__nodes,
+.ww-flow .react-flow__edges {
+  overflow: visible !important;
 }
 
 .ww-flow .react-flow__pane {
