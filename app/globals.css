@@ -264,6 +264,10 @@ button, a, input, textarea {
 
 .ww-flow .react-flow__renderer,
 .ww-flow .react-flow__container {
+  overflow: visible;
+}
+
+.ww-flow .react-flow {
   overflow: hidden;
 }
 
@@ -277,17 +281,30 @@ button, a, input, textarea {
 
 .ww-flow .react-flow__node {
   padding: 0;
-  overflow: visible;
+  overflow: visible !important;
   border: 0;
   background: transparent;
   box-shadow: none;
   cursor: grab;
   height: auto !important;
+  max-height: none !important;
 }
 
 .ww-flow .react-flow__node > * {
   width: 100%;
-  height: auto;
+  height: auto !important;
+  max-height: none;
+  overflow: visible;
+}
+
+.ww-flow .react-flow__node img,
+.ww-flow .react-flow__node canvas {
+  display: block;
+  width: 100%;
+  height: auto !important;
+  max-width: 100%;
+  object-fit: contain !important;
+  object-position: top center;
 }
 
 .ww-flow .react-flow__edge-path {
@@ -313,6 +330,11 @@ button, a, input, textarea {
   height: 10px;
   border: 1.5px solid #1a1a14;
   background: #fff;
+}
+
+.ww-flow .react-flow__handle-left.ww-handle-header,
+.ww-flow .react-flow__handle-right.ww-handle-header {
+  top: 18px !important;
 }
 
 .ww-flow .react-flow__node:focus,

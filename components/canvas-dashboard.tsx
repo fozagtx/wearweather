@@ -17,6 +17,7 @@ import {
   type Connection,
   type Edge,
   type Node,
+  type NodeChange,
   type NodeProps,
   type NodeTypes,
 } from "@xyflow/react";
@@ -85,7 +86,7 @@ const SIZE = {
   photos: { w: 340 },
   brief: { w: 380 },
   plan: { w: 300 },
-  stage: { w: 360 },
+  stage: { w: 420 },
   suggest: { w: 280 },
 };
 
@@ -95,8 +96,7 @@ function nodeBox(id: string, type: string, x: number, y: number, width: number, 
     type,
     position: { x, y },
     data,
-    style: { width },
-    width,
+    style: { width, height: "auto" },
   };
 }
 
@@ -128,7 +128,6 @@ function layoutEdges(plans: WearPlan[], selectedPlan?: WearPlan): Edge[] {
   const marker = { type: MarkerType.ArrowClosed, width: 14, height: 14, color: "#c4c4b4" };
   const active = { type: MarkerType.ArrowClosed, width: 14, height: 14, color: "#d25611" };
   return [
-    { id: "e-photos-stage", source: "photos", target: "stage", markerEnd: marker },
     ...plans.flatMap((plan) => {
       const on = selectedPlan?.lookId === plan.lookId;
       return [
@@ -164,9 +163,9 @@ function Station({
   target?: Position;
 }) {
   return (
-    <section className={`relative rounded-2xl border bg-card shadow-[0_1px_2px_rgba(26,26,20,0.04),0_12px_32px_rgba(26,26,20,0.05)] ${selected ? "border-foreground/40" : "border-border"}`}>
-      {target && <Handle type="target" position={target} className="ww-handle" />}
-      {source && <Handle type="source" position={source} className="ww-handle" />}
+    <section className={`relative overflow-visible rounded-2xl border bg-card shadow-[0_1px_2px_rgba(26,26,20,0.04),0_12px_32px_rgba(26,26,20,0.05)] ${selected ? "border-foreground/40" : "border-border"}`}>
+      {target && <Handle type="target" position={target} className="ww-handle ww-handle-header" />}
+      {source && <Handle type="source" position={source} className="ww-handle ww-handle-header" />}
       <header className="flex cursor-grab items-center justify-between gap-3 px-4 pt-3 pb-1 active:cursor-grabbing">
         <span className="flex items-center gap-3">
           <span className="grid grid-cols-2 gap-0.5" aria-hidden="true">
@@ -315,7 +314,7 @@ function PlanNode({ selected, data }: NodeProps) {
   const active = selectedPlan?.lookId === plan.lookId;
   return (
     <Station kicker={`0${plan.rank}`} title={plan.title} selected={selected || active} target={Position.Left} source={Position.Right}>
-      <img src={plan.sourceImageUrl} alt="" className="block h-auto w-full rounded-xl" />
+      <img src={plan.sourceImageUrl} alt="" className="block h-auto w-full object-contain object-top" />
       <ul className="mt-3 space-y-1.5">
         {plan.reasons.slice(0, 2).map((reason) => (
           <li key={reason} className="text-[12px] leading-relaxed text-muted-foreground">
@@ -373,7 +372,7 @@ function StageNode({ selected }: NodeProps) {
     <Station kicker="04" title="Try-on" hint={nextStep} selected={selected} target={Position.Left}>
       <div>
         <div
-          className={`relative rounded-xl border bg-[#ecece4] ${over ? "border-foreground" : "border-border"}`}
+          className={`relative overflow-visible rounded-xl border bg-[#ecece4] ${over ? "border-foreground" : "border-border"}`}
           onDragOver={(event) => {
             event.preventDefault();
             setOver(true);
@@ -410,7 +409,7 @@ function StageNode({ selected }: NodeProps) {
           {status === "idle" && (
             <div className="relative">
               {dash.originalUrl ? (
-                <img src={dash.originalUrl} alt="Photo that will be dressed" className="block h-auto w-full" />
+                <img src={dash.originalUrl} alt="Photo that will be dressed" className="block h-auto w-full object-contain object-top" />
               ) : (
                 <p className="px-4 py-16 text-center text-[12px] text-muted-foreground">Drop a photo here.</p>
               )}
@@ -443,7 +442,7 @@ function SuggestionNode({ selected, data }: NodeProps) {
   if (!solution || solution.status !== "open") return null;
   return (
     <Station kicker="STYLIST" title={solution.plan.title} selected={selected} target={Position.Left} source={Position.Right}>
-      <img src={solution.plan.sourceImageUrl} alt="" className="block h-auto w-full rounded-xl" />
+      <img src={solution.plan.sourceImageUrl} alt="" className="block h-auto w-full object-contain object-top" />
       <p className="mt-3 text-[12px] leading-relaxed">{solution.note}</p>
       <p className="mt-2 text-[12px] leading-relaxed text-muted-foreground">{solution.plan.reasons[0]}</p>
       <div className="mt-3 flex flex-wrap gap-2">
@@ -470,8 +469,14 @@ function FlowBoard({ value }: { value: DashboardProps }) {
   const shellRef = useRef<HTMLDivElement>(null);
   const seeded = useRef(false);
   const { setViewport } = useReactFlow();
-  const [nodes, setNodes, onNodesChange] = useNodesState(layoutNodes(1280, value.plans));
+  const [nodes, setNodes, onNodesChangeBase] = useNodesState(layoutNodes(1280, value.plans));
   const [edges, setEdges, onEdgesChange] = useEdgesState(layoutEdges(value.plans, value.selectedPlan));
+
+  const onNodesChange = useCallback((changes: NodeChange[]) => {
+    onNodesChangeBase(
+      changes.map((change) => (change.type === "dimensions" ? { ...change, setAttributes: false } : change)),
+    );
+  }, [onNodesChangeBase]);
 
   const seedLayout = useCallback(() => {
     const shell = shellRef.current;
