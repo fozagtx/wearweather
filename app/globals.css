@@ -103,6 +103,21 @@ button, a, input, textarea {
   40% { opacity: 1; transform: scale(1); }
 }
 
+@keyframes typing {
+  0%, 100% { transform: translateY(0); opacity: 0.5; }
+  50% { transform: translateY(-2px); opacity: 1; }
+}
+
+@keyframes loading-dots {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+
+@keyframes bounce-dots {
+  0%, 100% { transform: scale(0.8); opacity: 0.5; }
+  50% { transform: scale(1.2); opacity: 1; }
+}
+
 .stylist-dots {
   display: inline-flex;
   align-items: center;
@@ -286,7 +301,10 @@ button, a, input, textarea {
   .agent-marquee__track,
   .caret,
   .ww-glow,
-  .stylist-dots span {
+  .stylist-dots span,
+  .animate-\[typing_1s_infinite\],
+  .animate-\[loading-dots_1\.4s_infinite\],
+  .animate-\[bounce-dots_1\.4s_ease-in-out_infinite\] {
     animation: none !important;
   }
   .ww-glow { opacity: 0.75; }

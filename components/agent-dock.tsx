@@ -4,7 +4,12 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { Plus, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { PrimaryButton } from "@/components/ui";
+import { Loader } from "@/components/prompt-kit/loader";
+import { Message, MessageContent } from "@/components/prompt-kit/message";
+import { PromptInput, PromptInputActions, PromptInputTextarea } from "@/components/prompt-kit/prompt-input";
+import { PromptSuggestion } from "@/components/prompt-kit/prompt-suggestion";
+import { SystemMessage } from "@/components/prompt-kit/system-message";
+import { Button } from "@/components/ui/button";
 import type { WearUIMessage } from "@/lib/agent-tools";
 import type { HairPlan } from "@/lib/hair-engine";
 import type { MakeupPlan } from "@/lib/makeup-engine";
@@ -79,19 +84,6 @@ function turnsFrom(messages: WearUIMessage[]) {
   }
   if (pendingAsk) turns.push({ id: pendingId, ask: pendingAsk, reply: "" });
   return turns;
-}
-
-function Dots({ label }: { label?: string }) {
-  return (
-    <span className="inline-flex items-center gap-2" aria-live="polite" aria-busy="true">
-      <span className="stylist-dots" aria-hidden>
-        <span />
-        <span />
-        <span />
-      </span>
-      {label ? <span className="font-mono text-[11px] tracking-[0.12em] text-brand">{label}</span> : null}
-    </span>
-  );
 }
 
 export function AgentDock({
@@ -216,21 +208,38 @@ export function AgentDock({
     setInput("");
   };
 
+  const acceptLabel = acceptTarget
+    ? !canTryOn
+      ? "Add a photo first"
+      : busy
+        ? "Dressing…"
+        : "Accept"
+    : canTryMakeup
+      ? makeupBusy
+        ? "Makeup…"
+        : "Accept"
+      : canTryHair
+        ? hairBusy
+          ? "Hair…"
+          : "Accept"
+        : null;
+
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-sm">
       <div className="pointer-events-auto mx-auto max-w-[1600px] px-4 sm:px-5">
         {turns.length === 0 && showPrompts && !waiting && !errorText && (
-          <div className="divide-y divide-border border-b border-border">
+          <div className="flex flex-col gap-1 border-b border-border py-2">
             {prompts.map((prompt) => (
-              <button
+              <PromptSuggestion
                 key={prompt}
-                type="button"
-                className="flex min-h-12 w-full items-center justify-between gap-6 py-3 text-left text-sm tracking-[-0.2px] text-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                highlight={input}
+                variant="ghost"
+                size="sm"
+                className="h-auto min-h-11 w-full justify-between rounded-xl px-1 py-2 text-left text-sm font-normal tracking-[-0.2px]"
                 onClick={() => ask(prompt)}
               >
-                <span>{prompt}</span>
-                <Plus className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-              </button>
+                {prompt}
+              </PromptSuggestion>
             ))}
           </div>
         )}
@@ -247,17 +256,25 @@ export function AgentDock({
                     className="flex min-h-12 w-full items-center justify-between gap-6 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     onClick={() => setOpenId(open ? null : turn.id)}
                   >
-                    <span className="text-sm font-medium tracking-[-0.2px] text-foreground">{turn.ask}</span>
-                    <span className="grid size-8 shrink-0 place-items-center text-muted-foreground" aria-hidden>
+                    <Message className="min-w-0 flex-1">
+                      <MessageContent className="bg-transparent p-0 text-sm font-medium tracking-[-0.2px] text-foreground">
+                        {turn.ask}
+                      </MessageContent>
+                    </Message>
+                    <span className="grid size-10 shrink-0 place-items-center text-muted-foreground" aria-hidden>
                       {open ? <X className="size-4" /> : <Plus className="size-4" />}
                     </span>
                   </button>
                   {open && (
                     <div className="pb-4">
                       {turn.reply ? (
-                        <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">{turn.reply}</p>
+                        <Message>
+                          <MessageContent className="max-w-3xl bg-transparent p-0 text-sm leading-relaxed text-muted-foreground">
+                            {turn.reply}
+                          </MessageContent>
+                        </Message>
                       ) : waiting ? (
-                        <Dots label="LOOKING" />
+                        <Loader variant="loading-dots" size="sm" text="LOOKING" />
                       ) : null}
                     </div>
                   )}
@@ -267,56 +284,70 @@ export function AgentDock({
           </div>
         )}
 
-        {errorText && <p className="py-3 text-sm text-[#c43b3e]">{errorText}</p>}
+        {errorText && (
+          <SystemMessage
+            className="my-2"
+            variant="error"
+            fill
+            cta={{
+              label: "Ask again",
+              onClick: () => {
+                const last = turns[turns.length - 1]?.ask || input.trim();
+                if (last) ask(last);
+              },
+            }}
+          >
+            {errorText}
+          </SystemMessage>
+        )}
 
-        <form
-          className="flex items-center gap-2 py-3"
-          onSubmit={(event) => {
-            event.preventDefault();
-            ask(input.trim());
-          }}
+        <PromptInput
+          className="rounded-none border-0 bg-transparent p-0 py-2 shadow-none"
+          value={input}
+          onValueChange={setInput}
+          isLoading={waiting}
+          disabled={waiting}
+          maxHeight={88}
+          onSubmit={() => ask(input.trim())}
         >
           <label className="sr-only" htmlFor="stylist-ask">
             Ask what to wear
           </label>
-          <input
+          <PromptInputTextarea
             id="stylist-ask"
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            disabled={waiting}
             placeholder="What should I wear today?"
             onFocus={() => {
               if (turns.length === 0) setShowPrompts(true);
             }}
-            className="min-h-11 min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground focus-visible:ring-0"
           />
-          {acceptTarget && (
-            <PrimaryButton
-              type="button"
-              className="min-h-9 px-3 py-1.5 text-xs"
-              disabled={busy || !canTryOn}
-              onClick={() => {
-                onSelectPlan?.(acceptTarget.plan);
-                onAcceptSolution?.(acceptTarget);
-              }}
-            >
-              {!canTryOn ? "Add a photo first" : busy ? "Dressing…" : "Accept"}
-            </PrimaryButton>
-          )}
-          {!acceptTarget && canTryMakeup && (
-            <PrimaryButton type="button" className="min-h-9 px-3 py-1.5 text-xs" disabled={makeupBusy} onClick={() => onAcceptMakeup?.()}>
-              {makeupBusy ? "Makeup…" : "Accept"}
-            </PrimaryButton>
-          )}
-          {!acceptTarget && !canTryMakeup && canTryHair && (
-            <PrimaryButton type="button" className="min-h-9 px-3 py-1.5 text-xs" disabled={hairBusy} onClick={() => onAcceptHair?.()}>
-              {hairBusy ? "Hair…" : "Accept"}
-            </PrimaryButton>
-          )}
-          <PrimaryButton className="min-h-9 min-w-16 px-3 py-1.5 text-xs" disabled={waiting || !input.trim()} type="submit">
-            {waiting ? <Dots /> : "Ask"}
-          </PrimaryButton>
-        </form>
+          <PromptInputActions className="p-0">
+            {acceptTarget && (
+              <Button
+                size="sm"
+                disabled={busy || !canTryOn}
+                onClick={() => {
+                  onSelectPlan?.(acceptTarget.plan);
+                  onAcceptSolution?.(acceptTarget);
+                }}
+              >
+                {acceptLabel}
+              </Button>
+            )}
+            {!acceptTarget && canTryMakeup && (
+              <Button size="sm" disabled={makeupBusy} onClick={() => onAcceptMakeup?.()}>
+                {acceptLabel}
+              </Button>
+            )}
+            {!acceptTarget && !canTryMakeup && canTryHair && (
+              <Button size="sm" disabled={hairBusy} onClick={() => onAcceptHair?.()}>
+                {acceptLabel}
+              </Button>
+            )}
+            <Button size="sm" disabled={waiting || !input.trim()} onClick={() => ask(input.trim())}>
+              {waiting ? <Loader variant="dots" size="sm" /> : "Ask"}
+            </Button>
+          </PromptInputActions>
+        </PromptInput>
       </div>
     </div>
   );

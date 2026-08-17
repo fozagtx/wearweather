@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { SystemMessage } from "@/components/prompt-kit/system-message";
 import { GhostButton } from "@/components/ui";
 import type { StudioPhoto } from "@/lib/types";
 
@@ -125,9 +126,9 @@ export function PhotoStudio({
         </GhostButton>
       </div>
       {error && (
-        <p className="mt-2 text-xs text-[#c43b3e]" role="alert">
+        <SystemMessage className="mt-2" variant="error" fill>
           {error}
-        </p>
+        </SystemMessage>
       )}
     </div>
   );

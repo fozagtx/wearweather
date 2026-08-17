@@ -4,6 +4,9 @@ import { useState } from "react";
 import { CompareCanvas } from "@/components/compare-canvas";
 import { GlowLoad } from "@/components/glow-load";
 import { PHOTO_DRAG_TYPE, PhotoStudio } from "@/components/photo-studio";
+import { PromptInput, PromptInputActions, PromptInputTextarea } from "@/components/prompt-kit/prompt-input";
+import { SystemMessage } from "@/components/prompt-kit/system-message";
+import { Button } from "@/components/ui/button";
 import { GhostButton, PrimaryButton, RetailerLink } from "@/components/ui";
 import type { HairPlan } from "@/lib/hair-engine";
 import type { MakeupPlan } from "@/lib/makeup-engine";
@@ -328,12 +331,15 @@ function TryOnStage(dash: DashboardProps) {
         {status !== "running" && !dash.makeupBusy && dash.hairBusy && <GlowLoad active className="min-h-0 flex-1" startedAt={dash.hairStartedAt} label="HAIR" />}
         {status !== "running" && !dash.makeupBusy && !dash.hairBusy && dash.editBusy && <GlowLoad active className="min-h-0 flex-1" startedAt={dash.editStartedAt} label="EDIT" />}
         {status === "error" && (
-          <div className="p-8 text-center">
-            <p className="text-sm font-medium">Needs another take</p>
-            <p className="mt-2 text-sm text-muted-foreground">{dash.errorMessages[dash.taskError || ""] || dash.errorMessages.UNEXPECTED_ERROR}</p>
-            <PrimaryButton className="mt-4" onClick={dash.onRetry}>
-              Try again
-            </PrimaryButton>
+          <div className="grid flex-1 place-items-center p-6">
+            <SystemMessage
+              className="max-w-md"
+              variant="error"
+              fill
+              cta={{ label: "Try again", onClick: dash.onRetry, variant: "solid" }}
+            >
+              {dash.errorMessages[dash.taskError || ""] || dash.errorMessages.UNEXPECTED_ERROR}
+            </SystemMessage>
           </div>
         )}
         {status === "done" && dash.resultUrl && !dash.makeupBusy && !dash.hairBusy && !dash.editBusy && (
@@ -375,10 +381,14 @@ function TryOnStage(dash: DashboardProps) {
         )}
       </div>
       {dash.resultUrl && (
-        <form
-          className="mt-3 flex shrink-0 gap-2"
-          onSubmit={(event) => {
-            event.preventDefault();
+        <PromptInput
+          className="mt-3 shrink-0 rounded-2xl"
+          value={editDraft}
+          onValueChange={setEditDraft}
+          isLoading={dash.editBusy}
+          disabled={dash.editBusy}
+          maxHeight={88}
+          onSubmit={() => {
             const prompt = editDraft.trim();
             if (!prompt || dash.editBusy) return;
             dash.onEditLook(prompt);
@@ -388,23 +398,39 @@ function TryOnStage(dash: DashboardProps) {
           <label className="sr-only" htmlFor="edit-look">
             Edit the clothes
           </label>
-          <input
-            id="edit-look"
-            value={editDraft}
-            onChange={(event) => setEditDraft(event.target.value)}
-            disabled={dash.editBusy}
-            maxLength={400}
-            placeholder="Shorter hem, linen, navy jacket"
-            className="min-h-10 min-w-0 flex-1 rounded-xl border border-border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
-          <GhostButton type="submit" disabled={dash.editBusy || !editDraft.trim()}>
-            {dash.editBusy ? "Editing…" : "Edit"}
-          </GhostButton>
-        </form>
+          <PromptInputTextarea id="edit-look" maxLength={400} placeholder="Shorter hem, linen, navy jacket" />
+          <PromptInputActions>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={dash.editBusy || !editDraft.trim()}
+              onClick={() => {
+                const prompt = editDraft.trim();
+                if (!prompt || dash.editBusy) return;
+                dash.onEditLook(prompt);
+                setEditDraft("");
+              }}
+            >
+              {dash.editBusy ? "Editing…" : "Edit"}
+            </Button>
+          </PromptInputActions>
+        </PromptInput>
       )}
-      {dash.makeupError && <p className="mt-2 text-xs text-[#c43b3e]">{dash.errorMessages[dash.makeupError] || dash.errorMessages.UNEXPECTED_ERROR}</p>}
-      {dash.hairError && <p className="mt-2 text-xs text-[#c43b3e]">{dash.errorMessages[dash.hairError] || dash.errorMessages.UNEXPECTED_ERROR}</p>}
-      {dash.editError && <p className="mt-2 text-xs text-[#c43b3e]">{dash.errorMessages[dash.editError] || dash.errorMessages.UNEXPECTED_ERROR}</p>}
+      {dash.makeupError && (
+        <SystemMessage className="mt-2" variant="error" fill>
+          {dash.errorMessages[dash.makeupError] || dash.errorMessages.UNEXPECTED_ERROR}
+        </SystemMessage>
+      )}
+      {dash.hairError && (
+        <SystemMessage className="mt-2" variant="error" fill>
+          {dash.errorMessages[dash.hairError] || dash.errorMessages.UNEXPECTED_ERROR}
+        </SystemMessage>
+      )}
+      {dash.editError && (
+        <SystemMessage className="mt-2" variant="error" fill>
+          {dash.errorMessages[dash.editError] || dash.errorMessages.UNEXPECTED_ERROR}
+        </SystemMessage>
+      )}
     </section>
   );
 }
