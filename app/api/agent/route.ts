@@ -1,3 +1,4 @@
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import {
   convertToModelMessages,
   createUIMessageStream,
@@ -6,13 +7,23 @@ import {
   streamText,
   toUIMessageStream,
 } from "ai";
-import { deepSeek } from "@ai-sdk/deepseek";
 import { getActiveCatalogue } from "@/lib/catalogue";
 import { wearAgentTools, type WearUIMessage } from "@/lib/agent-tools";
 import { blankBrief } from "@/lib/example-brief";
 import { contextLabels, preferenceLabels, type WearContext } from "@/lib/types";
 
 export const maxDuration = 60;
+
+function aimlApiKey() {
+  return process.env.AIMLAPI_KEY || process.env.AIML_API_KEY || process.env.DEEPSEEK_API_KEY;
+}
+
+function aimlModel() {
+  const raw = process.env.AIMLAPI_MODEL || process.env.DEEPSEEK_MODEL || "deepseek/deepseek-v4-flash";
+  if (raw.includes("/")) return raw;
+  if (raw.startsWith("deepseek")) return `deepseek/${raw}`;
+  return raw;
+}
 
 function instructions(context: WearContext) {
   const looks = getActiveCatalogue()
@@ -44,8 +55,9 @@ export async function POST(req: Request) {
   const body = (await req.json()) as { messages?: WearUIMessage[]; context?: WearContext };
   const messages = body.messages || [];
   const context = body.context || blankBrief;
+  const apiKey = aimlApiKey();
 
-  if (!process.env.DEEPSEEK_API_KEY) {
+  if (!apiKey) {
     return createUIMessageStreamResponse({
       stream: createUIMessageStream({
         execute: ({ writer }) => {
@@ -53,7 +65,7 @@ export async function POST(req: Request) {
           writer.write({
             type: "text-delta",
             id: "offline",
-            delta: "Stylist is offline. Add DEEPSEEK_API_KEY on the server, then ask again.",
+            delta: "Stylist is offline. Add AIMLAPI_KEY on the server, then ask again.",
           });
           writer.write({ type: "text-end", id: "offline" });
         },
@@ -62,17 +74,18 @@ export async function POST(req: Request) {
   }
 
   const tools = wearAgentTools(context);
-  const modelId = process.env.DEEPSEEK_MODEL || "deepseek-v4-flash";
+  const aiml = createOpenAICompatible({
+    name: "aimlapi",
+    baseURL: "https://api.aimlapi.com/v1",
+    apiKey,
+  });
 
   const result = streamText({
-    model: deepSeek(modelId),
+    model: aiml.chatModel(aimlModel()),
     instructions: instructions(context),
     messages: await convertToModelMessages(messages, { tools }),
     tools,
     stopWhen: isStepCount(4),
-    providerOptions: {
-      deepseek: { thinking: { type: "disabled" } },
-    },
     onError: ({ error }) => {
       console.error("stylist", error);
     },

@@ -74,7 +74,7 @@ export function AgentDock({
   const errorText = (() => {
     const message = error?.message || "";
     if (/STYLIST_KEY_INVALID|authentication|api key/i.test(message)) {
-      return "DeepSeek rejected the API key. Add a key from platform.deepseek.com. It starts with sk-.";
+      return "AIMLAPI rejected the API key. Add AIMLAPI_KEY from aimlapi.com on the server, then ask again.";
     }
     if (/internet|failed to fetch|network|disconnected|offline/i.test(message)) {
       return "No network right now. Reconnect and ask again.";

@@ -48,7 +48,7 @@ WearWeather does not guess your gender from the photo. Makeup is opt-in. It does
 | --- | --- |
 | Catalogue | Labeled looks. Unknown facts never become a plus. |
 | Ranking | Runs in the browser against the brief. |
-| Stylist | DeepSeek V4. It ranks the same catalogue and drops Accept cards. |
+| Stylist | AIMLAPI, DeepSeek V4 Flash. It ranks the same catalogue and drops Accept cards. |
 | Clothes try-on | YouCam puts the chosen look on the photo. |
 | Makeup | YouCam Look templates first, custom makeup if that fails. |
 | Photo | Stays in the browser until you start try-on. No account. |
@@ -65,7 +65,7 @@ cp .env.example .env.local
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Ranking works immediately. Putting the look on a photo needs `YOUCAM_API_KEY`. The stylist needs `DEEPSEEK_API_KEY` (DeepSeek V4). Optional: `DEEPSEEK_MODEL=deepseek-v4-flash` or `deepseek-v4-pro`.
+Open [http://localhost:3000](http://localhost:3000). Ranking works immediately. Putting the look on a photo needs `YOUCAM_API_KEY`. The stylist needs `AIMLAPI_KEY` (AIMLAPI, model `deepseek/deepseek-v4-flash`). Optional: `AIMLAPI_MODEL=deepseek/deepseek-v4-flash` or `deepseek/deepseek-v4-pro`.
 
 **Try the example brief** uses a seeded client-meeting day (hot and humid, long commute, business polished). **Use my photo** keeps the file in the browser until you choose to try a look on.
 
