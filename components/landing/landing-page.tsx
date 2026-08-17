@@ -220,17 +220,22 @@ export function LandingPage({
               <span className="ml-3 text-foreground/80">{copied ? "Copied" : "Copy"}</span>
             </button>
           </div>
-          <div id="demo" className="relative mx-auto mt-12 w-full max-w-[1400px] overflow-hidden">
-            <Image
-              src="/optimized/hero-background.webp"
-              alt=""
-              fill
-              priority
-              sizes="100vw"
-              className="object-cover"
-            />
-            <div className="absolute inset-0 bg-background/35" />
-            <div className="relative px-2 py-8 sm:px-6 sm:py-12 lg:px-10">
+          <div
+            id="demo"
+            className="relative mx-auto mt-12 grid w-full max-w-[1400px] overflow-hidden rounded-3xl border border-border/60 shadow-[0_30px_90px_rgba(0,0,0,0.45)]"
+          >
+            <div className="relative col-start-1 row-start-1">
+              <Image
+                src="/optimized/hero-background.webp"
+                alt=""
+                fill
+                priority
+                sizes="100vw"
+                className="object-cover"
+              />
+              <div className="absolute inset-0 bg-background/35" />
+            </div>
+            <div className="relative z-10 col-start-1 row-start-1 px-2 py-8 sm:px-6 sm:py-12 lg:px-10">
               <HeroBoard />
             </div>
           </div>

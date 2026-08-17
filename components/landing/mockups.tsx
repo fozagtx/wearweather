@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import { motion, useReducedMotion } from "motion/react";
 import { WwLogo } from "@/components/ww-logo";
 import { getActiveCatalogue } from "@/lib/catalogue";
 import { exampleBrief, examplePhotoUrl } from "@/lib/example-brief";
@@ -109,12 +110,16 @@ export function HeroBoard() {
         </div>
         <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
           {plans.map((plan, index) => (
-            <article
+            <motion.article
               key={plan.planId}
               className={`overflow-hidden rounded-[var(--mockup-inner-radius)] border bg-[var(--preview-card)] ${
                 highlight === index ? "border-brand/70" : ""
               }`}
               style={{ borderColor: highlight === index ? undefined : "var(--preview-border)" }}
+              initial={reduced ? false : { opacity: 0, y: 12 }}
+              whileInView={reduced ? undefined : { opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.4 }}
+              transition={{ duration: 0.45, delay: index * 0.08, ease: [0.16, 1, 0.3, 1] }}
             >
               <div className="relative h-36 bg-muted">
                 <Image src={plan.sourceImageUrl} alt={plan.title} fill className="object-cover" sizes="200px" />
@@ -131,7 +136,7 @@ export function HeroBoard() {
                   {plan.reasons[0]}
                 </p>
               </div>
-            </article>
+            </motion.article>
           ))}
         </div>
       </div>
@@ -308,13 +313,25 @@ export function MockupStage({
   alt: string;
   children: React.ReactNode;
 }) {
+  const reduced = useReducedMotion();
   return (
-    <div className="relative w-full overflow-hidden sm:min-h-[300px] lg:aspect-4/3">
-      <Image src={src} alt={alt} fill className="object-cover" sizes="(min-width: 1280px) 620px, 100vw" />
-      <div className="absolute inset-0 bg-background/35" />
-      <div className="relative flex min-h-[300px] items-center justify-center p-4 sm:min-h-[340px] lg:absolute lg:inset-0">
-        <div className="w-full max-w-[620px]">{children}</div>
+    // Grid stack: the background layer and the card layer share one grid cell,
+    // so the stage always grows to fit the card (never clips or overlaps) while
+    // the background image always covers the full area — responsive at any width.
+    <div className="relative grid w-full overflow-hidden rounded-2xl border border-border/60 shadow-[0_24px_70px_rgba(0,0,0,0.4)]">
+      <div className="relative col-start-1 row-start-1 min-h-[320px]">
+        <Image src={src} alt={alt} fill className="object-cover" sizes="(min-width: 1280px) 620px, 100vw" />
+        <div className="absolute inset-0 bg-background/40" />
       </div>
+      <motion.div
+        className="relative z-10 col-start-1 row-start-1 flex items-center justify-center p-4 sm:p-6"
+        initial={reduced ? false : { opacity: 0, y: 16 }}
+        whileInView={reduced ? undefined : { opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.3 }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <div className="w-full max-w-[620px]">{children}</div>
+      </motion.div>
     </div>
   );
 }
