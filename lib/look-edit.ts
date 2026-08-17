@@ -23,19 +23,19 @@ function extractImageUrl(body: Record<string, unknown>) {
   return undefined;
 }
 
-export async function editLookImage(imageUrl: string, prompt: string) {
+export async function kontextEdit(imageUrl: string, prompt: string) {
   const key = aimlApiKey();
   if (!key) throw new Error("STYLIST_OFFLINE");
-  const trimmed = prompt.trim().slice(0, 400);
+  const trimmed = prompt.trim().slice(0, 4000);
   if (!trimmed) throw new Error("EMPTY_EDIT");
-  const image = await asDataUrl(imageUrl);
+  const image = imageUrl.startsWith("data:") ? imageUrl : await asDataUrl(imageUrl);
   const response = await fetch("https://api.aimlapi.com/v1/images/generations", {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       model: editModel(),
       image_url: image,
-      prompt: `Keep the same person, face, pose, and background. Change only the clothing as asked. Do not change identity. Do not infer gender. Edit: ${trimmed}`,
+      prompt: trimmed,
       num_images: 1,
       output_format: "jpeg",
       aspect_ratio: "3:4",
@@ -52,3 +52,14 @@ export async function editLookImage(imageUrl: string, prompt: string) {
   if (!url) throw new Error("TASK_FAILED");
   return url;
 }
+
+export async function editLookImage(imageUrl: string, prompt: string) {
+  const trimmed = prompt.trim().slice(0, 400);
+  if (!trimmed) throw new Error("EMPTY_EDIT");
+  return kontextEdit(
+    imageUrl,
+    `Keep the same person, face, pose, and background. Change only the clothing as asked. Do not change identity. Do not infer gender. Edit: ${trimmed}`,
+  );
+}
+
+export { asDataUrl };

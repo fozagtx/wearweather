@@ -58,10 +58,14 @@ export default function Home() {
   const [editBusy, setEditBusy] = useState(false);
   const [editError, setEditError] = useState<string>();
   const [editStartedAt, setEditStartedAt] = useState<number>();
+  const [orbitFrames, setOrbitFrames] = useState<string[]>();
+  const [orbitBusy, setOrbitBusy] = useState(false);
+  const [viewMode, setViewMode] = useState<"compare" | "spin">("compare");
   const [solutions, setSolutions] = useState<AgentSolution[]>([]);
   const vtoLock = useRef(false);
   const makeupGen = useRef(0);
   const hairGen = useRef(0);
+  const orbitGen = useRef(0);
   const editLock = useRef(false);
 
   const selectedPhoto = photos.find((photo) => photo.id === selectedPhotoId);
@@ -142,6 +146,7 @@ export default function Home() {
     vtoLock.current = true;
     makeupGen.current += 1;
     hairGen.current += 1;
+    orbitGen.current += 1;
     setSelectedPlan(plan);
     setTaskError(undefined);
     setSlow(false);
@@ -158,6 +163,9 @@ export default function Home() {
     setEditBeforeUrl(undefined);
     setEditError(undefined);
     setEditBusy(false);
+    setOrbitFrames(undefined);
+    setOrbitBusy(false);
+    setViewMode("compare");
     setPollStartedAt(Date.now());
     try {
       let file = sourceFile;
@@ -444,6 +452,37 @@ export default function Home() {
     };
   }, [hairRequestId, screen, hairPollStartedAt]);
 
+  useEffect(() => {
+    if (screen !== "board" || !wornImageUrl || !resultUrl) return;
+    if (activeRequestId || makeupBusy || hairBusy || editBusy) return;
+    const gen = ++orbitGen.current;
+    setOrbitBusy(true);
+    setOrbitFrames(undefined);
+    setViewMode("compare");
+    const load = async () => {
+      try {
+        const response = await fetch("/api/orbit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageUrl: wornImageUrl }),
+        });
+        const body = await response.json();
+        if (orbitGen.current !== gen) return;
+        if (!response.ok || !Array.isArray(body.frames) || body.frames.length < 2) {
+          setOrbitBusy(false);
+          return;
+        }
+        setOrbitFrames(body.frames);
+        setViewMode("spin");
+        setOrbitBusy(false);
+      } catch {
+        if (orbitGen.current !== gen) return;
+        setOrbitBusy(false);
+      }
+    };
+    void load();
+  }, [screen, wornImageUrl, resultUrl, activeRequestId, makeupBusy, hairBusy, editBusy]);
+
   const startEdit = async (prompt: string) => {
     const source = wornImageUrl;
     if (!source || editLock.current) return;
@@ -507,6 +546,9 @@ export default function Home() {
     setEditBeforeUrl(undefined);
     setEditBusy(false);
     setEditError(undefined);
+    setOrbitFrames(undefined);
+    setOrbitBusy(false);
+    setViewMode("compare");
     setTaskError(undefined);
     setRecommendationVersion(1);
     setSolutions([]);
@@ -583,6 +625,10 @@ export default function Home() {
             editError={editError}
             editStartedAt={editStartedAt}
             onEditLook={startEdit}
+            orbitFrames={orbitFrames}
+            orbitBusy={orbitBusy}
+            viewMode={viewMode}
+            onViewMode={setViewMode}
             errorMessages={errorMessages}
             solutions={solutions}
             onAcceptSolution={(solution) => {

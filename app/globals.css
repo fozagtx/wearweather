@@ -163,6 +163,22 @@ button, a, input, textarea {
   filter: contrast(1.15);
 }
 
+.ww-360 {
+  --ci360-brand-color: var(--brand);
+  --ci360-bg: #ecece4;
+}
+
+.ww-360 .cloudimage-360,
+.ww-360 [class*="cloudimage-360"] {
+  height: 100%;
+  width: 100%;
+}
+
+.ww-360 img {
+  object-fit: contain;
+  object-position: center top;
+}
+
 .compare-frame {
   position: relative;
   height: min(70vh, 680px);

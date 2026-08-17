@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CompareCanvas } from "@/components/compare-canvas";
 import { GlowLoad } from "@/components/glow-load";
+import { Look360 } from "@/components/look-360";
 import { PHOTO_DRAG_TYPE, PhotoStudio } from "@/components/photo-studio";
 import { PromptInput, PromptInputActions, PromptInputTextarea } from "@/components/prompt-kit/prompt-input";
 import { SystemMessage } from "@/components/prompt-kit/system-message";
@@ -69,6 +70,10 @@ export type DashboardProps = {
   editError?: string;
   editStartedAt?: number;
   onEditLook: (prompt: string) => void;
+  orbitFrames?: string[];
+  orbitBusy?: boolean;
+  viewMode?: "compare" | "spin";
+  onViewMode?: (mode: "compare" | "spin") => void;
   errorMessages: Record<string, string>;
   solutions: AgentSolution[];
   onAcceptSolution: (solution: AgentSolution) => void;
@@ -344,7 +349,10 @@ function TryOnStage(dash: DashboardProps) {
             </SystemMessage>
           </div>
         )}
-        {status === "done" && dash.resultUrl && !dash.makeupBusy && !dash.hairBusy && !dash.editBusy && (
+        {status === "done" && dash.resultUrl && !dash.makeupBusy && !dash.hairBusy && !dash.editBusy && dash.viewMode === "spin" && dash.orbitFrames && dash.orbitFrames.length > 1 && (
+          <Look360 frames={dash.orbitFrames} className="h-full min-h-0 w-full" />
+        )}
+        {status === "done" && dash.resultUrl && !dash.makeupBusy && !dash.hairBusy && !dash.editBusy && !(dash.viewMode === "spin" && dash.orbitFrames && dash.orbitFrames.length > 1) && (
           <CompareCanvas
             leftSrc={leftSrc}
             rightSrc={rightSrc}
@@ -380,6 +388,16 @@ function TryOnStage(dash: DashboardProps) {
           <GhostButton disabled={dash.hairBusy || dash.makeupBusy} onClick={dash.onTryHair}>
             {dash.hairBusy ? "Applying hair…" : "Try hair"}
           </GhostButton>
+        )}
+        {dash.orbitFrames && dash.orbitFrames.length > 1 && (
+          <GhostButton onClick={() => dash.onViewMode?.(dash.viewMode === "spin" ? "compare" : "spin")}>
+            {dash.viewMode === "spin" ? "Compare" : "360"}
+          </GhostButton>
+        )}
+        {dash.orbitBusy && !dash.orbitFrames && (
+          <span className="font-mono text-[11px] tracking-[0.12em] text-brand" aria-live="polite">
+            360
+          </span>
         )}
       </div>
       {dash.resultUrl && (
