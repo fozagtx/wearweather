@@ -313,7 +313,7 @@ export default function Home() {
   };
 
   const reset = async () => {
-    if (!window.confirm("Leave this rehearsal and return to the overview? Plans saved in this session will be cleared.")) return;
+    if (!window.confirm("Leave this studio and return home? Plans in this session will be cleared.")) return;
     await fetch("/api/session", { method: "DELETE" }).catch(() => undefined);
     photos.forEach((photo) => URL.revokeObjectURL(photo.url));
     setScreen("start");

@@ -81,7 +81,7 @@ export function PhotoStudio({
                     )}
                   </button>
                   <div className="mt-2 flex items-center gap-2">
-                    <GhostButton className="h-9 min-h-9 px-3 py-0 text-xs" onClick={() => onSelect(photo.id)} disabled={active}>
+                    <GhostButton className="h-10 min-h-10 px-3 py-0 text-xs" onClick={() => onSelect(photo.id)} disabled={active}>
                       {active ? "This photo is in use" : "Use this photo"}
                     </GhostButton>
                     <button
@@ -96,27 +96,31 @@ export function PhotoStudio({
               );
             })}
           </div>
-        ) : (
+        ) : examplePhotoUrl ? (
           <div>
-            {examplePhotoUrl && (
-              <div className="relative">
-                <img src={examplePhotoUrl} alt="Example try-on photo" className="block h-auto max-h-64 w-full rounded-lg object-contain object-top" />
-                <span className="absolute top-2 left-2 rounded-md bg-background/90 px-1.5 py-0.5 font-mono text-[9px] tracking-[0.12em]">
-                  EXAMPLE IN USE
-                </span>
-              </div>
-            )}
-            <p className="px-2 py-3 text-center text-[12px] text-muted-foreground">
-              Example photo is in use. Drop your photos here to dress yourself, then click Use this photo.
+            <div className="relative">
+              <img src={examplePhotoUrl} alt="Example try-on photo" className="block h-auto max-h-64 w-full rounded-lg object-contain object-top" />
+              <span className="absolute top-2 left-2 rounded-md bg-background/90 px-1.5 py-0.5 font-mono text-[9px] tracking-[0.12em]">
+                EXAMPLE
+              </span>
+            </div>
+            <p className="px-2 py-3 text-center text-xs leading-relaxed text-muted-foreground">
+              This example is on the try-on. Add your photo to dress yourself.
+            </p>
+          </div>
+        ) : (
+          <div className="px-3 py-10 text-center">
+            <p className="text-sm font-medium">Add a photo</p>
+            <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+              Drop a file here, or choose one. One person, facing forward, face and shoulders in frame.
             </p>
           </div>
         )}
       </div>
       <div className="mt-3 flex items-center gap-2">
-        <GhostButton className="h-9 min-h-9 px-3 py-0 text-xs" onClick={() => inputRef.current?.click()}>
-          Add photos
+        <GhostButton className="h-10 min-h-10 px-3 py-0 text-xs" onClick={() => inputRef.current?.click()}>
+          {photos.length ? "Add another photo" : "Choose a photo"}
         </GhostButton>
-        {photos.length > 0 && <p className="text-[11px] text-muted-foreground">Or drag a photo onto Try-on.</p>}
       </div>
       {error && (
         <p className="mt-2 text-xs text-[#c43b3e]" role="alert">

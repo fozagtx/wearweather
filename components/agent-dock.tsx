@@ -36,8 +36,13 @@ export function AgentDock({
   onContext: (next: WearContext) => void;
   onSolutions: (note: string, plans: WearPlan[], nextContext: WearContext) => void;
 }) {
+  const prompts = [
+    "Client meeting, hot, long commute. What should I wear?",
+    "Weekend, cool outside, I run warm.",
+    "Need coverage and easy movement for a long walk.",
+  ];
   const [input, setInput] = useState("");
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const contextRef = useRef(context);
   contextRef.current = context;
   const seen = useRef(new Set<string>());
@@ -86,75 +91,98 @@ export function AgentDock({
   })();
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-5 z-30 flex justify-center px-4">
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
       <div className="pointer-events-auto w-full max-w-xl overflow-hidden rounded-3xl border border-border bg-card shadow-[0_16px_40px_rgba(26,26,20,0.12)]">
         <button
           type="button"
-          className="flex w-full items-center justify-between px-4 py-3 text-left"
+          className="flex w-full min-h-11 items-center justify-between px-4 py-2 text-left"
           onClick={() => setOpen((value) => !value)}
         >
           <span>
             <span className="block font-mono text-[10px] tracking-[0.16em] text-muted-foreground">STYLIST</span>
             <span className="text-sm font-medium">Ask what to wear</span>
           </span>
-          <span className="text-xs text-muted-foreground">{open ? "Hide" : "Show"}</span>
+          <span className="text-xs text-muted-foreground">{open ? "Hide tips" : "Show tips"}</span>
         </button>
-        {open && (
-          <div className="border-t border-border">
-            <div className="max-h-48 space-y-2 overflow-auto px-4 py-3 text-[13px] leading-relaxed">
-              {messages.length === 0 && (
-                <p className="text-muted-foreground">Tell the day. Looks land as cards. Accept one to try it on.</p>
-              )}
-              {messages.map((message) => (
-                <div key={message.id}>
-                  <p className="font-mono text-[10px] tracking-[0.14em] text-muted-foreground">
-                    {message.role === "user" ? "YOU" : "STYLIST"}
-                  </p>
-                  {message.parts.map((part, index) => {
-                    if (part.type === "text" && part.text.trim()) {
-                      return (
-                        <p key={`${message.id}-${index}`} className="mt-0.5">
-                          {part.text}
-                        </p>
-                      );
-                    }
-                    if (isProposeTool(part)) {
-                      return (
-                        <p key={part.toolCallId} className="mt-0.5 text-muted-foreground">
-                          {part.state === "output-available" ? "Looks are on the board." : "Choosing looks…"}
-                        </p>
-                      );
-                    }
-                    return null;
-                  })}
+        {(open || messages.length > 0 || errorText) && (
+          <div className="max-h-40 space-y-2 overflow-auto border-t border-border px-4 py-3 text-[13px] leading-relaxed">
+            {open && messages.length === 0 && (
+              <div className="space-y-3">
+                <p className="text-muted-foreground">
+                  Say the day in plain words. Ranked looks land in step 3. Accept one to try it on this photo.
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {prompts.map((prompt) => (
+                    <button
+                      key={prompt}
+                      type="button"
+                      className="min-h-10 rounded-full border border-border px-3 py-2 text-left text-[11px] leading-snug text-muted-foreground hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      onClick={() => {
+                        if (status === "streaming" || status === "submitted") return;
+                        setOpen(true);
+                        sendMessage({ text: prompt });
+                      }}
+                    >
+                      {prompt}
+                    </button>
+                  ))}
                 </div>
-              ))}
-              {errorText && <p className="text-[#c43b3e]">{errorText}</p>}
-              <div ref={bottom} />
-            </div>
-            <form
-              className="flex gap-2 border-t border-border p-3"
-              onSubmit={(event) => {
-                event.preventDefault();
-                const text = input.trim();
-                if (!text || status === "streaming" || status === "submitted") return;
-                sendMessage({ text });
-                setInput("");
-              }}
-            >
-              <input
-                value={input}
-                onChange={(event) => setInput(event.target.value)}
-                disabled={status === "streaming" || status === "submitted"}
-                placeholder="What should I wear today?"
-                className="min-h-10 min-w-0 flex-1 rounded-xl border border-border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              />
-              <PrimaryButton className="min-h-10 px-3 py-2 text-xs" disabled={status === "streaming" || status === "submitted" || !input.trim()} type="submit">
-                {status === "streaming" || status === "submitted" ? "…" : "Ask"}
-              </PrimaryButton>
-            </form>
+              </div>
+            )}
+            {messages.map((message) => (
+              <div key={message.id}>
+                <p className="font-mono text-[10px] tracking-[0.14em] text-muted-foreground">
+                  {message.role === "user" ? "YOU" : "STYLIST"}
+                </p>
+                {message.parts.map((part, index) => {
+                  if (part.type === "text" && part.text.trim()) {
+                    return (
+                      <p key={`${message.id}-${index}`} className="mt-0.5">
+                        {part.text}
+                      </p>
+                    );
+                  }
+                  if (isProposeTool(part)) {
+                    return (
+                      <p key={part.toolCallId} className="mt-0.5 text-muted-foreground">
+                        {part.state === "output-available" ? "Looks are in step 3. Accept one to try it on." : "Choosing looks…"}
+                      </p>
+                    );
+                  }
+                  return null;
+                })}
+              </div>
+            ))}
+            {errorText && <p className="text-[#c43b3e]">{errorText}</p>}
+            <div ref={bottom} />
           </div>
         )}
+        <form
+          className="flex gap-2 border-t border-border p-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const text = input.trim();
+            if (!text || status === "streaming" || status === "submitted") return;
+            setOpen(true);
+            sendMessage({ text });
+            setInput("");
+          }}
+        >
+          <label className="sr-only" htmlFor="stylist-ask">
+            Ask what to wear
+          </label>
+          <input
+            id="stylist-ask"
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            disabled={status === "streaming" || status === "submitted"}
+            placeholder="What should I wear today?"
+            className="min-h-10 min-w-0 flex-1 rounded-xl border border-border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
+          <PrimaryButton className="min-h-10 px-3 py-2 text-xs" disabled={status === "streaming" || status === "submitted" || !input.trim()} type="submit">
+            {status === "streaming" || status === "submitted" ? "…" : "Ask"}
+          </PrimaryButton>
+        </form>
       </div>
     </div>
   );

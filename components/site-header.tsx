@@ -42,7 +42,7 @@ export function SiteHeader({
               <button
                 type="button"
                 className="flex items-center gap-2 text-sm font-medium tracking-[-0.3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                aria-label="Leave rehearsal and return home"
+                aria-label="Leave studio and return home"
                 onClick={onReset}
               >
                 <WwLogo className="size-8" />
@@ -70,7 +70,7 @@ export function SiteHeader({
               )}
               {showReset ? (
                 <button type="button" onClick={onReset} className={ctaClass}>
-                  Back to overview
+                  Leave studio
                 </button>
               ) : (
                 <button type="button" onClick={onStart} className={ctaClass}>
@@ -81,7 +81,7 @@ export function SiteHeader({
             <div className="flex items-center gap-2 lg:hidden">
               {showReset ? (
                 <button type="button" onClick={onReset} className={ctaClass}>
-                  Overview
+                  Leave
                 </button>
               ) : (
                 <>
