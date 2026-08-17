@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { rankMakeupPlans, recommendMakeup, type LookTemplate } from "@/lib/makeup-engine";
+import { rankMakeupPlans, type LookTemplate } from "@/lib/makeup-engine";
 import { isValidContext } from "@/lib/validation";
 import { listLookTemplates } from "@/lib/youcam";
 
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
       templates = [];
     }
     const plans = rankMakeupPlans(body.context, templates, 3);
-    return NextResponse.json({ plan: plans[0] || recommendMakeup(body.context, templates), plans });
+    return NextResponse.json({ plan: plans[0] || null, plans });
   } catch {
     return NextResponse.json({ code: "UNEXPECTED_ERROR" }, { status: 400 });
   }

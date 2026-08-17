@@ -85,28 +85,31 @@ function scoreTemplate(template: HairTemplate, keywords: string[], context: Wear
   return score;
 }
 
-function buildPlan(context: WearContext, kind: FinishKind, template?: HairTemplate): HairPlan {
-  const chosen = profileFor(kind, context);
+export function hairPlanForTemplate(context: WearContext, template: HairTemplate): HairPlan {
+  const chosen = profileFor(finishKind(context), context);
   const promptNote = (context.hairPrompt || "").trim() ? [`Your hair note: "${context.hairPrompt.trim()}".`] : [];
   return {
-    title: template?.title || chosen.title,
-    templateId: template?.id || "",
-    category: template?.category_name || chosen.category,
-    thumb: template?.thumb,
+    title: template.title,
+    templateId: template.id,
+    category: template.category_name,
+    thumb: template.thumb,
     reasons: [...promptNote, ...chosen.reasons].slice(0, 3),
-    keepColor: template?.keep_users_color !== false,
+    keepColor: template.keep_users_color !== false,
   };
 }
 
 export function rankHairPlans(context: WearContext, templates: HairTemplate[], count = 3): HairPlan[] {
+  if (!templates.length) return [];
   const promptTokens = expandHairTokens(context.hairPrompt || "");
   const kinds = ([finishKind(context), "slick", "loose", "set"] as FinishKind[]).filter(
     (kind, index, list) => list.indexOf(kind) === index,
   );
   const used = new Set<string>();
   const usedThumbs = new Set<string>();
+  const plans: HairPlan[] = [];
 
-  return kinds.slice(0, count).map((kind) => {
+  for (const kind of kinds) {
+    if (plans.length >= count) break;
     const chosen = profileFor(kind, context);
     const ranked = [...templates]
       .filter((template) => !used.has(template.id) && (!template.thumb || !usedThumbs.has(template.thumb)))
@@ -116,14 +119,14 @@ export function rankHairPlans(context: WearContext, templates: HairTemplate[], c
       })
       .sort((a, b) => b.score - a.score || a.template.id.localeCompare(b.template.id));
     const selected = ranked[0]?.template;
-    if (selected) {
-      used.add(selected.id);
-      if (selected.thumb) usedThumbs.add(selected.thumb);
-    }
-    return buildPlan(context, kind, selected);
-  });
+    if (!selected) continue;
+    used.add(selected.id);
+    if (selected.thumb) usedThumbs.add(selected.thumb);
+    plans.push(hairPlanForTemplate(context, selected));
+  }
+  return plans;
 }
 
-export function recommendHair(context: WearContext, templates: HairTemplate[]): HairPlan {
-  return rankHairPlans(context, templates, 1)[0] || buildPlan(context, finishKind(context));
+export function recommendHair(context: WearContext, templates: HairTemplate[]): HairPlan | undefined {
+  return rankHairPlans(context, templates, 1)[0];
 }

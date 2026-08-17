@@ -54,7 +54,7 @@ const features = [
   {
     eyebrow: "Makeup",
     title: "A day-matched finish, if you want one.",
-    body: "Opt in on the brief. WearWeather ranks a YouCam Look VTO template against the same day (meeting, heat, commute), then you can try it on the clothes rehearsal. Makeup VTO is the fallback. We do not infer gender from your photo.",
+    body: "Opt in on the brief. WearWeather ranks a YouCam Look VTO template against the same day (meeting, heat, commute), then you can try that finish on the clothes rehearsal. We do not infer gender from your photo.",
     media: <MakeupBoard />,
     src: "/optimized/feature3.webp",
     alt: "Ocean behind the makeup finish recommendation",
@@ -88,7 +88,7 @@ const faqs = [
   },
   {
     q: "Can I try makeup with the look?",
-    a: "Yes, if you opt in on the brief. After clothes try-on, WearWeather recommends a YouCam Look VTO template scored against the same day, with Makeup VTO effects as fallback. Anyone can opt in; the app does not infer gender from the photo. Virtual makeup is a visualization, not a product match guarantee.",
+    a: "Yes, if you opt in on the brief. After clothes try-on, WearWeather recommends a YouCam Look VTO template scored against the same day. Anyone can opt in; the app does not infer gender from the photo. Virtual makeup is a visualization, not a product match guarantee.",
   },
   {
     q: "How does ranking work?",

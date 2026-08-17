@@ -8,8 +8,8 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { exampleBrief, blankBrief, examplePhotoUrl } from "@/lib/example-brief";
 import { preparePhotoFile } from "@/lib/image-prep";
-import { rankHairPlans, recommendHair, type HairPlan } from "@/lib/hair-engine";
-import { rankMakeupPlans, recommendMakeup, type MakeupPlan } from "@/lib/makeup-engine";
+import { type HairPlan } from "@/lib/hair-engine";
+import { type MakeupPlan } from "@/lib/makeup-engine";
 import { rankWearPlans } from "@/lib/recommendation-engine";
 import { type AgentSolution, type StudioPhoto, type WearContext, type WearPlan } from "@/lib/types";
 const errorMessages: Record<string, string> = {
@@ -39,15 +39,15 @@ export default function Home() {
   const [recommendationVersion, setRecommendationVersion] = useState(1);
   const [uploadError, setUploadError] = useState<string>();
   const [pollStartedAt, setPollStartedAt] = useState<number>();
-  const [makeupPlans, setMakeupPlans] = useState<MakeupPlan[]>(() => rankMakeupPlans(exampleBrief, [], 3));
-  const [makeupPlan, setMakeupPlan] = useState<MakeupPlan>(() => recommendMakeup(exampleBrief, []));
+  const [makeupPlans, setMakeupPlans] = useState<MakeupPlan[]>([]);
+  const [makeupPlan, setMakeupPlan] = useState<MakeupPlan>();
   const [makeupUrl, setMakeupUrl] = useState<string>();
   const [makeupRequestId, setMakeupRequestId] = useState<string>();
   const [makeupBusy, setMakeupBusy] = useState(false);
   const [makeupError, setMakeupError] = useState<string>();
   const [makeupPollStartedAt, setMakeupPollStartedAt] = useState<number>();
-  const [hairPlans, setHairPlans] = useState<HairPlan[]>(() => rankHairPlans(exampleBrief, [], 3));
-  const [hairPlan, setHairPlan] = useState<HairPlan>(() => recommendHair(exampleBrief, []));
+  const [hairPlans, setHairPlans] = useState<HairPlan[]>([]);
+  const [hairPlan, setHairPlan] = useState<HairPlan>();
   const [hairUrl, setHairUrl] = useState<string>();
   const [hairRequestId, setHairRequestId] = useState<string>();
   const [hairBusy, setHairBusy] = useState(false);
@@ -60,8 +60,8 @@ export default function Home() {
   const [editStartedAt, setEditStartedAt] = useState<number>();
   const [solutions, setSolutions] = useState<AgentSolution[]>([]);
   const vtoLock = useRef(false);
-  const makeupLock = useRef(false);
-  const hairLock = useRef(false);
+  const makeupGen = useRef(0);
+  const hairGen = useRef(0);
   const editLock = useRef(false);
 
   const selectedPhoto = photos.find((photo) => photo.id === selectedPhotoId);
@@ -140,6 +140,8 @@ export default function Home() {
       return;
     }
     vtoLock.current = true;
+    makeupGen.current += 1;
+    hairGen.current += 1;
     setSelectedPlan(plan);
     setTaskError(undefined);
     setSlow(false);
@@ -225,43 +227,36 @@ export default function Home() {
     };
   }, [activeRequestId, pollStartedAt]);
 
-  const sourceAsFile = async () => {
-    if (sourceFile) return sourceFile;
-    const response = await fetch(examplePhotoUrl);
-    const blob = await response.blob();
-    return new File([blob], "example-source.jpg", { type: blob.type || "image/jpeg" });
-  };
-
-  const startMakeup = async () => {
-    if (!selectedPlan || !hasSource || !resultUrl || makeupLock.current) return;
-    makeupLock.current = true;
+  const startMakeup = async (plan = makeupPlan) => {
+    if (!selectedPlan || !resultUrl || !plan?.templateId) return;
+    const gen = ++makeupGen.current;
+    setMakeupPlan(plan);
     setMakeupBusy(true);
     setMakeupError(undefined);
     setHairUrl(undefined);
     setHairError(undefined);
+    setEditUrl(undefined);
+    setMakeupRequestId(undefined);
     setMakeupPollStartedAt(Date.now());
     try {
-      const file = await sourceAsFile();
       const form = new FormData();
-      form.append("photo", file);
       form.append("lookId", selectedPlan.lookId);
       form.append("sourceUrl", resultUrl);
       form.append("context", JSON.stringify(context));
-      if (makeupPlan?.templateId) form.append("templateId", makeupPlan.templateId);
+      form.append("templateId", plan.templateId);
       const response = await fetch("/api/makeup", { method: "POST", body: form });
       const body = await response.json();
+      if (makeupGen.current !== gen) return;
       if (!response.ok) {
         setMakeupError(body.code || "UNEXPECTED_ERROR");
         setMakeupBusy(false);
         return;
       }
-      if (body.plan) setMakeupPlan(body.plan);
       setMakeupRequestId(body.requestId);
     } catch {
+      if (makeupGen.current !== gen) return;
       setMakeupError("SERVICE_UNAVAILABLE");
       setMakeupBusy(false);
-    } finally {
-      makeupLock.current = false;
     }
   };
 
@@ -277,18 +272,15 @@ export default function Home() {
         });
         const body = await response.json();
         if (cancelled || !response.ok) return;
-        const next: MakeupPlan[] = Array.isArray(body.plans) && body.plans.length
-          ? body.plans
-          : body.plan
-            ? [body.plan]
-            : rankMakeupPlans(context, [], 3);
+        const next: MakeupPlan[] = (Array.isArray(body.plans) ? body.plans : body.plan ? [body.plan] : []).filter(
+          (plan: MakeupPlan) => plan?.templateId,
+        );
         setMakeupPlans(next);
-        setMakeupPlan((current) => next.find((plan) => plan.templateId === current?.templateId && plan.title === current?.title) || next[0]);
+        setMakeupPlan((current) => next.find((plan) => plan.templateId === current?.templateId) || next[0]);
       } catch {
         if (cancelled) return;
-        const next = rankMakeupPlans(context, [], 3);
-        setMakeupPlans(next);
-        setMakeupPlan((current) => next.find((plan) => plan.templateId === current?.templateId && plan.title === current?.title) || next[0]);
+        setMakeupPlans([]);
+        setMakeupPlan(undefined);
       }
     };
     load();
@@ -344,34 +336,35 @@ export default function Home() {
     };
   }, [makeupRequestId, screen, makeupPollStartedAt]);
 
-  const startHair = async () => {
-    if (!selectedPlan || !hasSource || !resultUrl || hairLock.current || !hairPlan?.templateId) return;
-    hairLock.current = true;
+  const startHair = async (plan = hairPlan) => {
+    const worn = makeupUrl || resultUrl;
+    if (!selectedPlan || !worn || !plan?.templateId) return;
+    const gen = ++hairGen.current;
+    setHairPlan(plan);
     setHairBusy(true);
     setHairError(undefined);
+    setEditUrl(undefined);
+    setHairRequestId(undefined);
     setHairPollStartedAt(Date.now());
     try {
-      const file = await sourceAsFile();
       const form = new FormData();
-      form.append("photo", file);
       form.append("lookId", selectedPlan.lookId);
-      form.append("sourceUrl", makeupUrl || resultUrl);
+      form.append("sourceUrl", worn);
       form.append("context", JSON.stringify(context));
-      form.append("templateId", hairPlan.templateId);
+      form.append("templateId", plan.templateId);
       const response = await fetch("/api/hair", { method: "POST", body: form });
       const body = await response.json();
+      if (hairGen.current !== gen) return;
       if (!response.ok) {
         setHairError(body.code || "UNEXPECTED_ERROR");
         setHairBusy(false);
         return;
       }
-      if (body.plan) setHairPlan(body.plan);
       setHairRequestId(body.requestId);
     } catch {
+      if (hairGen.current !== gen) return;
       setHairError("SERVICE_UNAVAILABLE");
       setHairBusy(false);
-    } finally {
-      hairLock.current = false;
     }
   };
 
@@ -387,18 +380,15 @@ export default function Home() {
         });
         const body = await response.json();
         if (cancelled || !response.ok) return;
-        const next: HairPlan[] = Array.isArray(body.plans) && body.plans.length
-          ? body.plans
-          : body.plan
-            ? [body.plan]
-            : rankHairPlans(context, [], 3);
+        const next: HairPlan[] = (Array.isArray(body.plans) ? body.plans : body.plan ? [body.plan] : []).filter(
+          (plan: HairPlan) => plan?.templateId,
+        );
         setHairPlans(next);
-        setHairPlan((current) => next.find((plan) => plan.templateId === current?.templateId && plan.title === current?.title) || next[0]);
+        setHairPlan((current) => next.find((plan) => plan.templateId === current?.templateId) || next[0]);
       } catch {
         if (cancelled) return;
-        const next = rankHairPlans(context, [], 3);
-        setHairPlans(next);
-        setHairPlan((current) => next.find((plan) => plan.templateId === current?.templateId && plan.title === current?.title) || next[0]);
+        setHairPlans([]);
+        setHairPlan(undefined);
       }
     };
     load();
@@ -501,14 +491,14 @@ export default function Home() {
     setSelectedPhotoId(undefined);
     setActiveRequestId(undefined);
     setResultUrl(undefined);
-    setMakeupPlans(rankMakeupPlans(exampleBrief, [], 3));
-    setMakeupPlan(recommendMakeup(exampleBrief, []));
+    setMakeupPlans([]);
+    setMakeupPlan(undefined);
     setMakeupUrl(undefined);
     setMakeupRequestId(undefined);
     setMakeupBusy(false);
     setMakeupError(undefined);
-    setHairPlans(rankHairPlans(exampleBrief, [], 3));
-    setHairPlan(recommendHair(exampleBrief, []));
+    setHairPlans([]);
+    setHairPlan(undefined);
     setHairUrl(undefined);
     setHairRequestId(undefined);
     setHairBusy(false);
@@ -564,7 +554,9 @@ export default function Home() {
               setMakeupUrl(undefined);
               setMakeupError(undefined);
               setHairUrl(undefined);
+              setEditUrl(undefined);
               setContext((current) => ({ ...current, makeupFinish: true }));
+              if (resultUrl) void startMakeup(plan);
             }}
             makeupUrl={makeupUrl}
             makeupBusy={makeupBusy}
@@ -576,6 +568,8 @@ export default function Home() {
               setHairPlan(plan);
               setHairUrl(undefined);
               setHairError(undefined);
+              setEditUrl(undefined);
+              if (resultUrl) void startHair(plan);
             }}
             hairUrl={hairUrl}
             hairBusy={hairBusy}

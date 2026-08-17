@@ -81,6 +81,14 @@ function extractResultUrl(data: { results?: unknown }) {
   return results?.url || results?.download_url;
 }
 
+export async function fileFromImageUrl(url: string, name = "worn.jpg"): Promise<File> {
+  const response = await fetch(url, { cache: "no-store" });
+  if (!response.ok) throw new Error("REFERENCE_DOWNLOAD_FAILED");
+  const bytes = await response.arrayBuffer();
+  const type = response.headers.get("content-type") || "image/jpeg";
+  return new File([bytes], name, { type: type.startsWith("image/") ? type : "image/jpeg" });
+}
+
 export async function getClothesTask(providerTaskId: string) {
   const body = await providerJson(`${baseUrl()}/s2s/v2.0/task/cloth-v4/${encodeURIComponent(providerTaskId)}`, { method: "GET" });
   const taskStatus = body?.data?.task_status;
@@ -264,7 +272,9 @@ export function mapYouCamError(error: unknown) {
   if (message.includes("HTTP_429") || message.includes("TooMany") || message.includes("rate_limit") || message.includes("RATE_LIMIT")) {
     return "RATE_LIMITED" as const;
   }
-  if (message.includes("invalid_parameter") || message.includes("YOUCAM_UPLOAD")) return "TASK_FAILED" as const;
+  if (message.includes("invalid_parameter") || message.includes("YOUCAM_UPLOAD") || message.includes("REFERENCE_DOWNLOAD_FAILED")) {
+    return "TASK_FAILED" as const;
+  }
   if (message.includes("HTTP_5") || message.includes("fetch")) return "SERVICE_UNAVAILABLE" as const;
   return "TASK_FAILED" as const;
 }

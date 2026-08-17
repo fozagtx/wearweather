@@ -23,8 +23,6 @@ export type MakeupPlan = {
   source: "look-vto" | "makeup-vto-fallback";
 };
 
-const FALLBACK_TEMPLATE_ID = "all_rosy_chic";
-
 type FinishKind = "meeting" | "sheer" | "evening";
 
 function finishKind(context: WearContext): FinishKind {
@@ -127,30 +125,33 @@ function scoreTemplate(template: LookTemplate, keywords: string[], context: Wear
   return score;
 }
 
-function buildPlan(context: WearContext, kind: FinishKind, template?: LookTemplate): MakeupPlan {
-  const chosen = profileFor(kind, context);
-  const promptNote = context.makeupPrompt.trim() ? [`Your makeup note: "${context.makeupPrompt.trim()}".`] : [];
+export function makeupPlanForTemplate(context: WearContext, template: LookTemplate): MakeupPlan {
+  const chosen = profileFor(finishKind(context), context);
+  const promptNote = (context.makeupPrompt || "").trim() ? [`Your makeup note: "${context.makeupPrompt.trim()}".`] : [];
   return {
-    title: template?.title || chosen.title,
-    templateId: template?.id || FALLBACK_TEMPLATE_ID,
-    category: template?.category_name || chosen.category,
-    thumb: template?.thumb,
+    title: template.title,
+    templateId: template.id,
+    category: template.category_name,
+    thumb: template.thumb,
     reasons: [...promptNote, ...chosen.reasons].slice(0, 3),
     effects: chosen.effects,
     swatches: chosen.swatches,
-    source: template ? "look-vto" : "makeup-vto-fallback",
+    source: "look-vto",
   };
 }
 
 export function rankMakeupPlans(context: WearContext, templates: LookTemplate[], count = 3): MakeupPlan[] {
+  if (!templates.length) return [];
   const promptTokens = expandMakeupTokens(context.makeupPrompt || "");
   const kinds = ([finishKind(context), "meeting", "sheer", "evening"] as FinishKind[]).filter(
     (kind, index, list) => list.indexOf(kind) === index,
   );
   const used = new Set<string>();
   const usedThumbs = new Set<string>();
+  const plans: MakeupPlan[] = [];
 
-  return kinds.slice(0, count).map((kind) => {
+  for (const kind of kinds) {
+    if (plans.length >= count) break;
     const chosen = profileFor(kind, context);
     const ranked = [...templates]
       .filter((template) => !used.has(template.id) && (!template.thumb || !usedThumbs.has(template.thumb)))
@@ -160,14 +161,14 @@ export function rankMakeupPlans(context: WearContext, templates: LookTemplate[],
       })
       .sort((a, b) => b.score - a.score || a.template.id.localeCompare(b.template.id));
     const selected = ranked[0]?.template;
-    if (selected) {
-      used.add(selected.id);
-      if (selected.thumb) usedThumbs.add(selected.thumb);
-    }
-    return buildPlan(context, kind, selected);
-  });
+    if (!selected) continue;
+    used.add(selected.id);
+    if (selected.thumb) usedThumbs.add(selected.thumb);
+    plans.push(makeupPlanForTemplate(context, selected));
+  }
+  return plans;
 }
 
-export function recommendMakeup(context: WearContext, templates: LookTemplate[]): MakeupPlan {
-  return rankMakeupPlans(context, templates, 1)[0] || buildPlan(context, finishKind(context));
+export function recommendMakeup(context: WearContext, templates: LookTemplate[]): MakeupPlan | undefined {
+  return rankMakeupPlans(context, templates, 1)[0];
 }

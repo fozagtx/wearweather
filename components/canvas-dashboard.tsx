@@ -211,11 +211,12 @@ function MakeupPicker({
   selected?: MakeupPlan;
   onSelect: (plan: MakeupPlan) => void;
 }) {
-  if (!plans.length) return null;
+  const real = plans.filter((plan) => plan.templateId);
+  if (!real.length) return null;
   const seenThumbs = new Set<string>();
   return (
     <div className="mt-3 grid shrink-0 grid-cols-3 gap-2">
-      {plans.map((plan, index) => {
+      {real.map((plan, index) => {
         const active = selected?.templateId === plan.templateId && selected.title === plan.title;
         const thumb = plan.thumb && !seenThumbs.has(plan.thumb) ? plan.thumb : undefined;
         if (plan.thumb) seenThumbs.add(plan.thumb);
@@ -255,11 +256,12 @@ function HairPicker({
   selected?: HairPlan;
   onSelect: (plan: HairPlan) => void;
 }) {
-  if (!plans.length) return null;
+  const real = plans.filter((plan) => plan.templateId);
+  if (!real.length) return null;
   const seenThumbs = new Set<string>();
   return (
     <div className="mt-3 grid shrink-0 grid-cols-3 gap-2">
-      {plans.map((plan, index) => {
+      {real.map((plan, index) => {
         const active = selected?.templateId === plan.templateId && selected.title === plan.title;
         const thumb = plan.thumb && !seenThumbs.has(plan.thumb) ? plan.thumb : undefined;
         if (plan.thumb) seenThumbs.add(plan.thumb);

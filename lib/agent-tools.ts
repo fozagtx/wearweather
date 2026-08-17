@@ -83,12 +83,12 @@ export function wearAgentTools(current: WearContext, wornImageUrl?: string) {
         try {
           makeupPlans = rankMakeupPlans(context, await listLookTemplates(), 3);
         } catch {
-          makeupPlans = rankMakeupPlans(context, [], 3);
+          makeupPlans = [];
         }
         try {
           hairPlans = rankHairPlans(context, await listHairTemplates(), 3);
         } catch {
-          hairPlans = rankHairPlans(context, [], 3);
+          hairPlans = [];
         }
         return { note, context, plans, makeupPlans, hairPlans };
       },

@@ -5,7 +5,6 @@ import Image from "next/image";
 import { WwLogo } from "@/components/ww-logo";
 import { getActiveCatalogue } from "@/lib/catalogue";
 import { exampleBrief, examplePhotoUrl } from "@/lib/example-brief";
-import { recommendMakeup } from "@/lib/makeup-engine";
 import { rankWearPlans } from "@/lib/recommendation-engine";
 import {
   PREFERENCES,
@@ -270,26 +269,27 @@ export function TryOnDetail() {
 }
 
 export function MakeupBoard() {
-  const plan = useMemo(() => recommendMakeup(exampleBrief, []), []);
   return (
     <WindowChrome title="Makeup finish · example brief">
       <div className="p-3 text-left">
         <p className="font-mono text-[10px] tracking-[0.5px] text-[var(--preview-muted-foreground)]">
           Same brief as the outfit · YouCam Look VTO
         </p>
-        <p className="mt-3 text-lg font-medium tracking-[-0.4px]">{plan.title}</p>
-        <p className="mt-1 font-mono text-[10px] tracking-[0.4px] text-brand-light">
-          {plan.category} · {plan.templateId}
-        </p>
+        <p className="mt-3 text-lg font-medium tracking-[-0.4px]">Meeting polish</p>
+        <p className="mt-1 font-mono text-[10px] tracking-[0.4px] text-brand-light">Daily</p>
         <ul className="mt-4 space-y-2">
-          {plan.reasons.map((reason) => (
-            <li key={reason} className="text-[11px] leading-snug text-[var(--preview-muted-foreground)]">
-              ↗ {reason}
-            </li>
-          ))}
+          <li className="text-[11px] leading-snug text-[var(--preview-muted-foreground)]">
+            ↗ Business-polished client meeting: a defined lip and a quiet blush, not a night look.
+          </li>
+          <li className="text-[11px] leading-snug text-[var(--preview-muted-foreground)]">
+            ↗ Scored against the same brief as the outfit: business polished, hot and humid.
+          </li>
         </ul>
         <div className="mt-4 flex flex-wrap gap-3">
-          {plan.swatches.map((swatch) => (
+          {[
+            { name: "Blush", hex: "#C97B84" },
+            { name: "Lip", hex: "#C4787A" },
+          ].map((swatch) => (
             <span key={swatch.name} className="flex items-center gap-2 font-mono text-[10px] text-[var(--preview-muted-foreground)]">
               <span className="size-3.5 rounded-full border border-white/20" style={{ background: swatch.hex }} />
               {swatch.name} {swatch.hex}
