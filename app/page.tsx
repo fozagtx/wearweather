@@ -53,16 +53,23 @@ export default function Home() {
   const [hairBusy, setHairBusy] = useState(false);
   const [hairError, setHairError] = useState<string>();
   const [hairPollStartedAt, setHairPollStartedAt] = useState<number>();
+  const [editUrl, setEditUrl] = useState<string>();
+  const [editBeforeUrl, setEditBeforeUrl] = useState<string>();
+  const [editBusy, setEditBusy] = useState(false);
+  const [editError, setEditError] = useState<string>();
+  const [editStartedAt, setEditStartedAt] = useState<number>();
   const [solutions, setSolutions] = useState<AgentSolution[]>([]);
   const vtoLock = useRef(false);
   const makeupLock = useRef(false);
   const hairLock = useRef(false);
+  const editLock = useRef(false);
 
   const selectedPhoto = photos.find((photo) => photo.id === selectedPhotoId);
   const sourceFile = selectedPhoto?.file;
   const sourcePreview = selectedPhoto?.url;
   const hasSource = mode === "example" || Boolean(sourceFile);
   const originalUrl = sourcePreview || (mode === "example" ? examplePhotoUrl : "");
+  const wornImageUrl = editUrl || hairUrl || makeupUrl || resultUrl;
 
   useEffect(() => {
     const ranked = rankWearPlans(context, recommendationVersion, originalUrl ? [originalUrl] : []);
@@ -145,6 +152,10 @@ export default function Home() {
     setHairError(undefined);
     setHairBusy(false);
     setHairRequestId(undefined);
+    setEditUrl(undefined);
+    setEditBeforeUrl(undefined);
+    setEditError(undefined);
+    setEditBusy(false);
     setPollStartedAt(Date.now());
     try {
       let file = sourceFile;
@@ -443,6 +454,35 @@ export default function Home() {
     };
   }, [hairRequestId, screen, hairPollStartedAt]);
 
+  const startEdit = async (prompt: string) => {
+    const source = wornImageUrl;
+    if (!source || editLock.current) return;
+    editLock.current = true;
+    setEditBeforeUrl(source);
+    setEditBusy(true);
+    setEditError(undefined);
+    setEditStartedAt(Date.now());
+    try {
+      const response = await fetch("/api/edit-look", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl: source, prompt }),
+      });
+      const body = await response.json();
+      if (!response.ok) {
+        setEditError(body.code || "UNEXPECTED_ERROR");
+        setEditBusy(false);
+        return;
+      }
+      setEditUrl(body.resultUrl);
+    } catch {
+      setEditError("SERVICE_UNAVAILABLE");
+    } finally {
+      setEditBusy(false);
+      editLock.current = false;
+    }
+  };
+
   const retry = () => {
     setTaskError(undefined);
     startVto();
@@ -473,6 +513,10 @@ export default function Home() {
     setHairRequestId(undefined);
     setHairBusy(false);
     setHairError(undefined);
+    setEditUrl(undefined);
+    setEditBeforeUrl(undefined);
+    setEditBusy(false);
+    setEditError(undefined);
     setTaskError(undefined);
     setRecommendationVersion(1);
     setSolutions([]);
@@ -538,6 +582,12 @@ export default function Home() {
             hairError={hairError}
             hairStartedAt={hairPollStartedAt}
             onTryHair={startHair}
+            editUrl={editUrl}
+            editBeforeUrl={editBeforeUrl}
+            editBusy={editBusy}
+            editError={editError}
+            editStartedAt={editStartedAt}
+            onEditLook={startEdit}
             errorMessages={errorMessages}
             solutions={solutions}
             onAcceptSolution={(solution) => {
@@ -568,6 +618,14 @@ export default function Home() {
             hairBusy={hairBusy}
             hairTitle={hairPlan?.title}
             onAcceptHair={() => void startHair()}
+            wornImageUrl={wornImageUrl}
+            onEditResult={(url) => {
+              if (!url) return;
+              setEditBeforeUrl(wornImageUrl);
+              setEditUrl(url);
+              setEditError(undefined);
+              setEditBusy(false);
+            }}
             onAcceptSolution={(solution) => {
               setSolutions((current) =>
                 current.map((item) =>

@@ -25,7 +25,7 @@ function aimlModel() {
   return raw;
 }
 
-function instructions(context: WearContext) {
+function instructions(context: WearContext, wornImageUrl?: string) {
   const looks = getActiveCatalogue()
     .map((look) => `${look.id}: ${look.title}`)
     .join("\n");
@@ -34,6 +34,7 @@ function instructions(context: WearContext) {
 Help them decide what to wear for the day they actually have. Ask only what you still need: setting, outside temperature, commute time, polish, and up to three priorities (I run warm, I avoid cling, I need easy movement, I prefer coverage, I need low-maintenance care). Fashion notes and makeup notes are optional.
 
 When they name any day, including honeymoon, resort, weekend, dinner, or travel, call proposeWearSolutions. Map honeymoon, resort, beach, or travel to vacation and smart casual unless they ask for dinner polish. Put their words in lookPrompt.
+If they already have a try-on on screen and they want to change that outfit (color, length, fabric, drop a layer), call editWornLook. Do not call that until a look is on them.
 
 Always rank the closest three looks on this rack. Never refuse. Never say the catalogue is only business or that you lack resort wear. Do not invent a garment that is not in the catalogue. Never infer gender from a photo. Makeup and hair are optional. Keep replies short. American spelling. Do not use em dashes.
 
@@ -49,13 +50,15 @@ Priorities: ${context.preferences.map((id) => preferenceLabels[id]).join(", ") |
 Makeup: ${context.makeupFinish ? "opt-in" : "off"}
 Fashion note: ${context.lookPrompt || "none"}
 Makeup note: ${context.makeupPrompt || "none"}
-Hair note: ${context.hairPrompt || "none"}`;
+Hair note: ${context.hairPrompt || "none"}
+Try-on on screen: ${wornImageUrl ? "yes, you can editWornLook" : "no"}`;
 }
 
 export async function POST(req: Request) {
-  const body = (await req.json()) as { messages?: WearUIMessage[]; context?: WearContext };
+  const body = (await req.json()) as { messages?: WearUIMessage[]; context?: WearContext; wornImageUrl?: string };
   const messages = body.messages || [];
   const context = body.context || blankBrief;
+  const wornImageUrl = typeof body.wornImageUrl === "string" ? body.wornImageUrl : undefined;
   const apiKey = aimlApiKey();
 
   if (!apiKey) {
@@ -74,7 +77,7 @@ export async function POST(req: Request) {
     });
   }
 
-  const tools = wearAgentTools(context);
+  const tools = wearAgentTools(context, wornImageUrl);
   const aiml = createOpenAICompatible({
     name: "aimlapi",
     baseURL: "https://api.aimlapi.com/v1",
@@ -83,7 +86,7 @@ export async function POST(req: Request) {
 
   const result = streamText({
     model: aiml.chatModel(aimlModel()),
-    instructions: instructions(context),
+    instructions: instructions(context, wornImageUrl),
     messages: await convertToModelMessages(messages, { tools }),
     tools,
     stopWhen: isStepCount(4),

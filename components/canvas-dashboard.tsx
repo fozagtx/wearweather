@@ -60,6 +60,12 @@ export type DashboardProps = {
   hairError?: string;
   hairStartedAt?: number;
   onTryHair: () => void;
+  editUrl?: string;
+  editBeforeUrl?: string;
+  editBusy?: boolean;
+  editError?: string;
+  editStartedAt?: number;
+  onEditLook: (prompt: string) => void;
   errorMessages: Record<string, string>;
   solutions: AgentSolution[];
   onAcceptSolution: (solution: AgentSolution) => void;
@@ -280,18 +286,24 @@ function HairPicker({
 function TryOnStage(dash: DashboardProps) {
   const [compare, setCompare] = useState(46);
   const [over, setOver] = useState(false);
-  const showingHair = Boolean(dash.hairUrl);
-  const showingMakeup = Boolean(dash.makeupUrl) && !showingHair;
-  const leftSrc = showingHair
-    ? dash.makeupUrl || dash.resultUrl || dash.originalUrl
-    : showingMakeup
-      ? dash.resultUrl || dash.originalUrl
-      : dash.originalUrl;
-  const rightSrc = showingHair
-    ? dash.hairUrl || dash.makeupUrl || dash.resultUrl || dash.originalUrl
-    : showingMakeup
+  const [editDraft, setEditDraft] = useState("");
+  const showingEdit = Boolean(dash.editUrl);
+  const showingHair = Boolean(dash.hairUrl) && !showingEdit;
+  const showingMakeup = Boolean(dash.makeupUrl) && !showingHair && !showingEdit;
+  const leftSrc = showingEdit
+    ? dash.editBeforeUrl || dash.hairUrl || dash.makeupUrl || dash.resultUrl || dash.originalUrl
+    : showingHair
       ? dash.makeupUrl || dash.resultUrl || dash.originalUrl
-      : dash.resultUrl || dash.originalUrl;
+      : showingMakeup
+        ? dash.resultUrl || dash.originalUrl
+        : dash.originalUrl;
+  const rightSrc = showingEdit
+    ? dash.editUrl || dash.hairUrl || dash.makeupUrl || dash.resultUrl || dash.originalUrl
+    : showingHair
+      ? dash.hairUrl || dash.makeupUrl || dash.resultUrl || dash.originalUrl
+      : showingMakeup
+        ? dash.makeupUrl || dash.resultUrl || dash.originalUrl
+        : dash.resultUrl || dash.originalUrl;
   const status = dash.taskError ? "error" : dash.vtoRunning ? "running" : dash.resultUrl ? "done" : "idle";
 
   return (
@@ -314,6 +326,7 @@ function TryOnStage(dash: DashboardProps) {
         {status === "running" && <GlowLoad active className="min-h-0 flex-1" startedAt={dash.vtoStartedAt} label="RENDERING" />}
         {status !== "running" && dash.makeupBusy && <GlowLoad active className="min-h-0 flex-1" startedAt={dash.makeupStartedAt} label="MAKEUP" />}
         {status !== "running" && !dash.makeupBusy && dash.hairBusy && <GlowLoad active className="min-h-0 flex-1" startedAt={dash.hairStartedAt} label="HAIR" />}
+        {status !== "running" && !dash.makeupBusy && !dash.hairBusy && dash.editBusy && <GlowLoad active className="min-h-0 flex-1" startedAt={dash.editStartedAt} label="EDIT" />}
         {status === "error" && (
           <div className="p-8 text-center">
             <p className="text-sm font-medium">Needs another take</p>
@@ -323,13 +336,13 @@ function TryOnStage(dash: DashboardProps) {
             </PrimaryButton>
           </div>
         )}
-        {status === "done" && dash.resultUrl && !dash.makeupBusy && !dash.hairBusy && (
+        {status === "done" && dash.resultUrl && !dash.makeupBusy && !dash.hairBusy && !dash.editBusy && (
           <CompareCanvas
             leftSrc={leftSrc}
             rightSrc={rightSrc}
             position={compare}
-            leftLabel={showingHair ? (dash.makeupUrl ? "OUTFIT + MAKEUP" : "OUTFIT") : showingMakeup ? "OUTFIT" : "YOUR PHOTO"}
-            rightLabel={showingHair ? "+ HAIR" : showingMakeup ? "OUTFIT + MAKEUP" : "TRY-ON"}
+            leftLabel={showingEdit ? "BEFORE" : showingHair ? (dash.makeupUrl ? "OUTFIT + MAKEUP" : "OUTFIT") : showingMakeup ? "OUTFIT" : "YOUR PHOTO"}
+            rightLabel={showingEdit ? "EDIT" : showingHair ? "+ HAIR" : showingMakeup ? "OUTFIT + MAKEUP" : "TRY-ON"}
             onPosition={setCompare}
             className="h-full w-full min-h-0"
           />
@@ -361,8 +374,37 @@ function TryOnStage(dash: DashboardProps) {
           </GhostButton>
         )}
       </div>
+      {dash.resultUrl && (
+        <form
+          className="mt-3 flex shrink-0 gap-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const prompt = editDraft.trim();
+            if (!prompt || dash.editBusy) return;
+            dash.onEditLook(prompt);
+            setEditDraft("");
+          }}
+        >
+          <label className="sr-only" htmlFor="edit-look">
+            Edit the clothes
+          </label>
+          <input
+            id="edit-look"
+            value={editDraft}
+            onChange={(event) => setEditDraft(event.target.value)}
+            disabled={dash.editBusy}
+            maxLength={400}
+            placeholder="Shorter hem, linen, navy jacket"
+            className="min-h-10 min-w-0 flex-1 rounded-xl border border-border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
+          <GhostButton type="submit" disabled={dash.editBusy || !editDraft.trim()}>
+            {dash.editBusy ? "Editing…" : "Edit"}
+          </GhostButton>
+        </form>
+      )}
       {dash.makeupError && <p className="mt-2 text-xs text-[#c43b3e]">{dash.errorMessages[dash.makeupError] || dash.errorMessages.UNEXPECTED_ERROR}</p>}
       {dash.hairError && <p className="mt-2 text-xs text-[#c43b3e]">{dash.errorMessages[dash.hairError] || dash.errorMessages.UNEXPECTED_ERROR}</p>}
+      {dash.editError && <p className="mt-2 text-xs text-[#c43b3e]">{dash.errorMessages[dash.editError] || dash.errorMessages.UNEXPECTED_ERROR}</p>}
     </section>
   );
 }

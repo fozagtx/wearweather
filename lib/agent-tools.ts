@@ -12,6 +12,7 @@ import {
   type PreferenceId,
   type WearContext,
 } from "@/lib/types";
+import { editLookImage } from "@/lib/look-edit";
 import { listHairTemplates, listLookTemplates } from "@/lib/youcam";
 
 const briefPatch = z.object({
@@ -41,8 +42,20 @@ export function mergeBrief(base: WearContext, patch: z.infer<typeof briefPatch>)
   };
 }
 
-export function wearAgentTools(current: WearContext) {
+export function wearAgentTools(current: WearContext, wornImageUrl?: string) {
   return {
+    editWornLook: tool({
+      description:
+        "Edit the clothes on the current try-on photo, like ChatGPT image edit. Use when they already have a look on them and want a change: color, length, fabric, remove a jacket, add a belt. Do not use this to pick a new catalogue look. Do not infer gender.",
+      inputSchema: z.object({
+        prompt: z.string().max(400).describe("The clothing change only, in one short line."),
+      }),
+      execute: async ({ prompt }) => {
+        if (!wornImageUrl) return { error: "NO_LOOK_YET" as const };
+        const resultUrl = await editLookImage(wornImageUrl, prompt);
+        return { resultUrl, prompt };
+      },
+    }),
     proposeWearSolutions: tool({
       description:
         "Always call this for any day they name, including honeymoon, resort, weekend, dinner, or travel. Rank the closest catalogue looks. Never refuse. Never say the rack is only office wear. Makeup and hair are optional. Do not infer gender.",

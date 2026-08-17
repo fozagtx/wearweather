@@ -18,6 +18,12 @@ type ProposeOutput = {
   hairPlans?: HairPlan[];
 };
 
+type EditOutput = {
+  resultUrl?: string;
+  prompt?: string;
+  error?: string;
+};
+
 function isProposeTool(part: WearUIMessage["parts"][number]): part is Extract<
   WearUIMessage["parts"][number],
   { type: "tool-proposeWearSolutions" } | { type: "dynamic-tool"; toolName: string }
@@ -29,6 +35,20 @@ function proposeOutput(part: WearUIMessage["parts"][number]): (ProposeOutput & {
   if (!isProposeTool(part) || part.state !== "output-available" || !part.output) return null;
   const output = part.output as ProposeOutput;
   if (!output.plans?.length) return null;
+  return { ...output, toolCallId: part.toolCallId };
+}
+
+function isEditTool(part: WearUIMessage["parts"][number]): part is Extract<
+  WearUIMessage["parts"][number],
+  { type: "tool-editWornLook" } | { type: "dynamic-tool"; toolName: string }
+> {
+  return part.type === "tool-editWornLook" || (part.type === "dynamic-tool" && part.toolName === "editWornLook");
+}
+
+function editOutput(part: WearUIMessage["parts"][number]): (EditOutput & { toolCallId: string }) | null {
+  if (!isEditTool(part) || part.state !== "output-available" || !part.output) return null;
+  const output = part.output as EditOutput;
+  if (!output.resultUrl) return null;
   return { ...output, toolCallId: part.toolCallId };
 }
 
@@ -92,6 +112,8 @@ export function AgentDock({
   hairBusy = false,
   hairTitle,
   onAcceptHair,
+  wornImageUrl,
+  onEditResult,
 }: {
   context: WearContext;
   onContext: (next: WearContext) => void;
@@ -110,6 +132,8 @@ export function AgentDock({
   hairBusy?: boolean;
   hairTitle?: string;
   onAcceptHair?: () => void;
+  wornImageUrl?: string;
+  onEditResult?: (resultUrl: string) => void;
 }) {
   const prompts = [
     "Client meeting, hot, long commute. What should I wear?",
@@ -121,6 +145,8 @@ export function AgentDock({
   const [showPrompts, setShowPrompts] = useState(false);
   const contextRef = useRef(context);
   contextRef.current = context;
+  const wornRef = useRef(wornImageUrl);
+  wornRef.current = wornImageUrl;
   const seen = useRef(new Set<string>());
 
   const transport = useMemo(
@@ -128,7 +154,7 @@ export function AgentDock({
       new DefaultChatTransport({
         api: "/api/agent",
         prepareSendMessagesRequest: ({ messages }) => ({
-          body: { messages, context: contextRef.current },
+          body: { messages, context: contextRef.current, wornImageUrl: wornRef.current },
         }),
       }),
     [],
@@ -143,16 +169,23 @@ export function AgentDock({
       if (message.role !== "assistant") continue;
       for (const part of message.parts) {
         const output = proposeOutput(part);
-        if (!output || seen.current.has(output.toolCallId)) continue;
-        seen.current.add(output.toolCallId);
-        if (!output.plans?.length) continue;
-        onContext(output.context);
-        onSolutions(output.note, output.plans, output.context, output.makeupPlans, output.hairPlans);
-        onSelectPlan?.(output.plans[0]);
-        setOpenId(null);
+        if (output && !seen.current.has(output.toolCallId)) {
+          seen.current.add(output.toolCallId);
+          if (output.plans?.length) {
+            onContext(output.context);
+            onSolutions(output.note, output.plans, output.context, output.makeupPlans, output.hairPlans);
+            onSelectPlan?.(output.plans[0]);
+            setOpenId(null);
+          }
+        }
+        const edited = editOutput(part);
+        if (edited && !seen.current.has(edited.toolCallId)) {
+          seen.current.add(edited.toolCallId);
+          onEditResult?.(edited.resultUrl!);
+        }
       }
     }
-  }, [messages, onContext, onSolutions, onSelectPlan]);
+  }, [messages, onContext, onSolutions, onSelectPlan, onEditResult]);
 
   useEffect(() => {
     const last = turns[turns.length - 1];
