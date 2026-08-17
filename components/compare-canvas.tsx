@@ -2,6 +2,10 @@
 
 import { useEffect, useRef } from "react";
 
+function easeOut(t: number) {
+  return 1 - (1 - t) ** 3;
+}
+
 export function CompareCanvas({
   leftSrc,
   rightSrc,
@@ -23,6 +27,9 @@ export function CompareCanvas({
   const leftImage = useRef<HTMLImageElement | null>(null);
   const rightImage = useRef<HTMLImageElement | null>(null);
   const ready = useRef(0);
+  const interrupt = useRef(false);
+  const onPositionRef = useRef(onPosition);
+  onPositionRef.current = onPosition;
 
   useEffect(() => {
     let cancelled = false;
@@ -108,6 +115,57 @@ export function CompareCanvas({
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    interrupt.current = false;
+    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      onPositionRef.current(46);
+      return;
+    }
+    let cancelled = false;
+    let raf = 0;
+    let wait = 0;
+
+    const animateTo = (from: number, to: number, ms: number) =>
+      new Promise<void>((resolve) => {
+        const start = performance.now();
+        const tick = (now: number) => {
+          if (cancelled || interrupt.current) return resolve();
+          const t = Math.min(1, (now - start) / ms);
+          onPositionRef.current(from + (to - from) * easeOut(t));
+          if (t < 1) raf = requestAnimationFrame(tick);
+          else resolve();
+        };
+        raf = requestAnimationFrame(tick);
+      });
+
+    const pause = (ms: number) =>
+      new Promise<void>((resolve) => {
+        wait = window.setTimeout(resolve, ms);
+      });
+
+    const run = async () => {
+      await pause(280);
+      for (let pass = 0; pass < 3; pass += 1) {
+        if (cancelled || interrupt.current) return;
+        await animateTo(8, 92, 900);
+        if (cancelled || interrupt.current) return;
+        await pause(160);
+        await animateTo(92, 8, 720);
+        if (cancelled || interrupt.current) return;
+        await pause(120);
+      }
+      if (cancelled || interrupt.current) return;
+      await animateTo(8, 46, 480);
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+      window.clearTimeout(wait);
+    };
+  }, [leftSrc, rightSrc]);
+
   return (
     <div className={`relative bg-[#ecece4] ${className}`}>
       <canvas ref={canvasRef} className="block h-full w-full" />
@@ -121,7 +179,13 @@ export function CompareCanvas({
         min="0"
         max="100"
         value={position}
-        onChange={(event) => onPosition(Number(event.target.value))}
+        onPointerDown={() => {
+          interrupt.current = true;
+        }}
+        onChange={(event) => {
+          interrupt.current = true;
+          onPosition(Number(event.target.value));
+        }}
       />
       <div className="pointer-events-none absolute top-4 left-4 rounded-md border border-border bg-background/80 px-2 py-1.5 font-mono text-[10px] tracking-[0.5px]">
         {leftLabel}
