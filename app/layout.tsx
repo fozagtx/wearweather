@@ -34,10 +34,6 @@ export const metadata: Metadata = {
     description: "Stop guessing the outfit. Start rehearsing the day.",
     images: ["/og-image.png"],
   },
-  icons: {
-    icon: [{ url: "/ww-logo.svg", type: "image/svg+xml" }],
-    apple: "/ww-logo.png",
-  },
 };
 
 export const viewport: Viewport = {
