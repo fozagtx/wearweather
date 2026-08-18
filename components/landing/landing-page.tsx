@@ -14,7 +14,7 @@ import {
   TryOnDetail,
 } from "@/components/landing/mockups";
 import { getActiveCatalogue } from "@/lib/catalogue";
-import { exampleBrief } from "@/lib/example-brief";
+import { exampleBrief, examplePhotos } from "@/lib/example-brief";
 import { rankWearPlans } from "@/lib/recommendation-engine";
 import { PREFERENCES, contextLabels, preferenceLabels } from "@/lib/types";
 
@@ -46,7 +46,7 @@ const features = [
   {
     eyebrow: "Try-on",
     title: "See the look on your photo, then read the limit.",
-    body: "When you start try-on, the app sends your photo and the catalogue still to YouCam cloth-v4. Clothes, makeup, and hair use that same path for every body. Until it finishes, you are looking at the source photo and the catalogue reference, not a generated result.",
+    body: "When you start try-on, the app sends your photo and the catalogue still to YouCam cloth-v4. Clothes, makeup, hair, edit, and 360 use that same path for every body, including plus size. Until it finishes, you are looking at the source photo and the catalogue reference, not a generated result.",
     media: <TryOnDetail />,
     src: "/optimized/feature2.webp",
     alt: "Forest behind the source and catalogue comparison",
@@ -70,7 +70,7 @@ const features = [
   {
     eyebrow: "Session",
     title: "No account. Photo stays here until you submit.",
-    body: "Preview is a local object URL. The server stores only a short-lived signed cookie mapping request IDs. Reset deletes it. WearWeather does not store your image.",
+    body: "Preview is a local object URL. The server stores only a short-lived signed cookie mapping request IDs. Reset deletes it. WearWeather does not store your image. The same try-on path runs for every body.",
     media: <SessionPreview />,
     src: "/optimized/feature4.webp",
     alt: "Dunes behind the photo-consent preview",
@@ -100,7 +100,11 @@ const faqs = [
   },
   {
     q: "Can I use my own photo?",
-    a: "Yes. JPG or PNG, under 10 MB, one person facing forward with the whole face and shoulders visible. Example photos include a Black woman, a mid-size woman, and a plus-size woman. Clothes, makeup, and hair try-on use the same YouCam path for every photo. WearWeather does not assess body, health, or worth.",
+    a: "Yes. JPG or PNG, under 10 MB, one person facing forward with the whole face and shoulders visible. Example photos include a Black woman, a mid-size woman, and a plus-size woman. Clothes, makeup, hair, edit, and 360 use the same YouCam path for every photo. WearWeather does not assess body, health, or worth.",
+  },
+  {
+    q: "Does this work if I am plus size?",
+    a: "Yes. Plus size is included. The example set shows a plus-size woman, a mid-size woman, and a Black woman. There is no slim-only mode. The same YouCam clothes, makeup, and hair path runs for every photo.",
   },
 ];
 
@@ -200,7 +204,7 @@ export function LandingPage({
               Start rehearsing the day.
             </h1>
             <p className="mt-4 max-w-md text-base leading-relaxed text-muted-foreground">
-              Rank three looks for the day you actually have, then try one on a photo before you buy.
+              Rank three looks for the day you actually have, then try one on a photo before you buy. The same try-on runs for every body, including plus size.
             </p>
             <div className="mt-5 flex flex-wrap gap-3">
               {hasSave && onContinue && <PrimaryButton onClick={onContinue}>Continue saved look</PrimaryButton>}
@@ -220,6 +224,24 @@ export function LandingPage({
                 Clear saved look
               </button>
             )}
+            <div className="mt-6">
+              <div className="grid grid-cols-3 gap-2">
+                {examplePhotos.map((photo) => (
+                  <button
+                    key={photo.id}
+                    type="button"
+                    onClick={onExample}
+                    className="overflow-hidden rounded-xl border border-border bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label={`Rehearse the example day with ${photo.alt}`}
+                  >
+                    <img src={photo.url} alt={photo.alt} className="block aspect-[3/4] w-full object-contain object-top" />
+                  </button>
+                ))}
+              </div>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                Same try-on for every body. Plus size included.
+              </p>
+            </div>
           </div>
           <div className="min-w-0">
             <HeroBoard />

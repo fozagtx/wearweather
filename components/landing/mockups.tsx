@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { WwLogo } from "@/components/ww-logo";
 import { getActiveCatalogue } from "@/lib/catalogue";
-import { exampleBrief, examplePhotoUrl } from "@/lib/example-brief";
+import { exampleBrief, examplePhotos } from "@/lib/example-brief";
 import { rankWearPlans } from "@/lib/recommendation-engine";
 import {
   PREFERENCES,
@@ -235,6 +235,7 @@ export function TryOnDetail() {
   const reduced = usePrefersReducedMotion();
   const tick = useTick(2200, !reduced);
   const pos = reduced ? 50 : 28 + (tick % 5) * 12;
+  const example = examplePhotos[tick % examplePhotos.length];
 
   return (
     <WindowChrome title="Source photo · catalogue reference">
@@ -243,13 +244,23 @@ export function TryOnDetail() {
           <div className="relative h-36 overflow-hidden rounded-[var(--mockup-inner-radius)] border border-border bg-muted">
             <img src={plan.sourceImageUrl} alt={`Catalogue reference: ${plan.title}`} className="h-full w-full object-cover object-top" />
             <div className="absolute inset-y-0 left-0 overflow-hidden border-r border-white/70" style={{ width: `${pos}%` }}>
-              <img src={examplePhotoUrl} alt="Example source photo" className="h-full w-[620px] max-w-none object-cover object-top" />
+              <img src={example.url} alt={example.alt} className="h-full w-[620px] max-w-none object-cover object-top" />
             </div>
             <div className="absolute top-2 left-2 rounded bg-background/80 px-1.5 py-0.5 font-mono text-[9px]">EXAMPLE PHOTO</div>
             <div className="absolute top-2 right-2 rounded bg-background/80 px-1.5 py-0.5 font-mono text-[9px]">CATALOGUE STILL</div>
           </div>
+          <div className="mt-2 grid grid-cols-3 gap-1.5">
+            {examplePhotos.map((photo) => (
+              <img
+                key={photo.id}
+                src={photo.url}
+                alt={photo.alt}
+                className={`block aspect-[3/4] w-full object-contain object-top ${photo.id === example.id ? "ring-1 ring-foreground/40" : "opacity-80"}`}
+              />
+            ))}
+          </div>
           <p className="mt-2 text-[11px] leading-relaxed text-[var(--preview-muted-foreground)]">
-            Live YouCam cloth-v4 runs after you pick a plan. This slider is the example photo against the ranked look’s catalogue image, not a generated result.
+            Live YouCam cloth-v4 runs after you pick a plan. The example set includes a Black woman, a mid-size woman, and a plus-size woman. This slider is that photo against the ranked look’s catalogue image, not a generated result.
           </p>
         </div>
         <aside
@@ -297,7 +308,7 @@ export function MakeupBoard() {
           ))}
         </div>
         <p className="mt-5 text-[10px] leading-relaxed text-[var(--preview-muted-foreground)]">
-          Opt in on the brief. We do not infer gender from the photo. Virtual makeup is a visualization, not a product match.
+          Opt in on the brief. Anyone can. We do not infer gender from the photo. Virtual makeup is a visualization, not a product match.
         </p>
       </div>
     </WindowChrome>
@@ -349,7 +360,7 @@ export function SessionPreview() {
       <div className="p-3 text-left text-xs leading-relaxed">
         <p className="text-sm font-medium">Your image stays in this session.</p>
         <div className="mt-3 rounded-lg border border-brand/30 border-l-[3px] border-l-brand bg-brand/10 p-3 text-[var(--preview-muted-foreground)]">
-          Used only to create a virtual outfit rendering for this session. WearWeather does not assess body, health, or worth. Reset deletes the session.
+          Used only to create a virtual outfit rendering for this session. The same path runs for every body, including plus size. WearWeather does not assess body, health, or worth. Reset deletes the session.
         </div>
         <p className="mt-3 font-mono text-[10px] tracking-[0.4px] text-foreground/70">PHOTO GUIDANCE</p>
         <p className="mt-1 text-[var(--preview-muted-foreground)]">
