@@ -497,23 +497,20 @@ export function CanvasDashboard(dash: DashboardProps) {
           <StepRail photoReady={photoReady} lookReady={lookReady} onYou={onYou} />
         </header>
 
-        <div className="mt-3 grid min-h-0 flex-1 gap-4 lg:grid-cols-[15rem_minmax(0,1.15fr)_minmax(0,0.95fr)] lg:grid-rows-[minmax(0,1fr)]">
-          <aside className="flex min-h-0 flex-col gap-4 lg:overflow-auto">
-            <section id="step-photo" className="flex min-h-0 flex-1 flex-col">
-              <div className="flex min-h-0 flex-1 flex-col">
-                <PhotoStudio
-                  compact
-                  photos={dash.photos}
-                  selectedId={dash.selectedPhotoId}
-                  error={dash.uploadError}
-                  examplePhotos={dash.mode === "example" ? dash.examplePhotos : undefined}
-                  selectedExampleId={dash.selectedExampleId}
-                  onSelectExample={dash.onSelectExample}
-                  onAdd={dash.onAddPhotos}
-                  onSelect={dash.onSelectPhoto}
-                  onRemove={dash.onRemovePhoto}
-                />
-              </div>
+        <div className="mt-3 grid min-h-0 flex-1 gap-4 lg:grid-cols-[19rem_minmax(0,1.15fr)_minmax(0,0.95fr)] lg:grid-rows-[minmax(0,1fr)]">
+          <aside className="flex min-h-0 flex-col gap-4 overflow-y-auto">
+            <section id="step-photo" className="shrink-0">
+              <PhotoStudio
+                photos={dash.photos}
+                selectedId={dash.selectedPhotoId}
+                error={dash.uploadError}
+                examplePhotos={dash.mode === "example" ? dash.examplePhotos : undefined}
+                selectedExampleId={dash.selectedExampleId}
+                onSelectExample={dash.onSelectExample}
+                onAdd={dash.onAddPhotos}
+                onSelect={dash.onSelectPhoto}
+                onRemove={dash.onRemovePhoto}
+              />
             </section>
 
             <section id="step-day" className="shrink-0">

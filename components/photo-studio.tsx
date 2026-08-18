@@ -18,7 +18,6 @@ export function PhotoStudio({
   onAdd,
   onSelect,
   onRemove,
-  compact = false,
 }: {
   photos: StudioPhoto[];
   selectedId?: string;
@@ -29,14 +28,11 @@ export function PhotoStudio({
   onAdd: (files: FileList | null) => void;
   onSelect: (id: string) => void;
   onRemove: (id: string) => void;
-  compact?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
 
-  const imageClass = compact
-    ? "block h-full max-h-none w-full object-contain object-top"
-    : "block h-auto max-h-none w-full object-contain object-top";
+  const imageClass = "block h-auto max-h-none w-full object-contain object-top";
 
   const takeFiles = (event: React.DragEvent) => {
     event.preventDefault();
@@ -45,7 +41,7 @@ export function PhotoStudio({
   };
 
   return (
-    <div className={compact ? "flex min-h-0 flex-1 flex-col" : undefined}>
+    <div>
       <input
         ref={inputRef}
         className="sr-only"
@@ -58,7 +54,7 @@ export function PhotoStudio({
         }}
       />
       <div
-        className={`min-h-0 rounded-xl border border-dashed p-2 ${compact ? "flex-1" : ""} ${over ? "border-foreground bg-muted/80" : "border-border bg-muted/40"}`}
+        className={`rounded-xl border border-dashed p-2 ${over ? "border-foreground bg-muted/80" : "border-border bg-muted/40"}`}
         onDragOver={(event) => {
           event.preventDefault();
           setOver(true);
@@ -111,7 +107,7 @@ export function PhotoStudio({
             })}
           </div>
         ) : examplePhotos?.length ? (
-          <div className={compact ? "flex h-full min-h-0 flex-col gap-2" : "space-y-2"}>
+          <div className="space-y-2">
             <div className="grid grid-cols-3 gap-2">
               {examplePhotos.map((photo) => {
                 const active = photo.id === selectedExampleId;
@@ -137,7 +133,7 @@ export function PhotoStudio({
             <p className="px-0.5 text-xs leading-relaxed text-muted-foreground">Same try-on for every body.</p>
           </div>
         ) : (
-          <div className={`grid place-items-center px-3 text-center ${compact ? "h-full py-4" : "py-10"}`}>
+          <div className="grid place-items-center px-3 py-10 text-center">
             <p className="text-sm text-muted-foreground">Add a photo</p>
           </div>
         )}
