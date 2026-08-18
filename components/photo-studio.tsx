@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { SystemMessage } from "@/components/prompt-kit/system-message";
 import { GhostButton } from "@/components/ui";
+import type { ExamplePhoto } from "@/lib/example-brief";
 import type { StudioPhoto } from "@/lib/types";
 
 export const PHOTO_DRAG_TYPE = "application/x-ww-photo";
@@ -11,7 +12,9 @@ export function PhotoStudio({
   photos,
   selectedId,
   error,
-  examplePhotoUrl,
+  examplePhotos,
+  selectedExampleId,
+  onSelectExample,
   onAdd,
   onSelect,
   onRemove,
@@ -20,7 +23,9 @@ export function PhotoStudio({
   photos: StudioPhoto[];
   selectedId?: string;
   error?: string;
-  examplePhotoUrl?: string;
+  examplePhotos?: ExamplePhoto[];
+  selectedExampleId?: string;
+  onSelectExample?: (id: string) => void;
   onAdd: (files: FileList | null) => void;
   onSelect: (id: string) => void;
   onRemove: (id: string) => void;
@@ -105,14 +110,31 @@ export function PhotoStudio({
               );
             })}
           </div>
-        ) : examplePhotoUrl ? (
-          <div className={compact ? "flex h-full min-h-0 flex-col" : undefined}>
-            <div className={compact ? "relative min-h-0 flex-1" : "relative"}>
-              <img src={examplePhotoUrl} alt="Example try-on photo" className={`${imageClass} rounded-lg`} />
-              <span className="absolute top-2 left-2 rounded-md bg-background/90 px-1.5 py-0.5 font-mono text-[9px] tracking-[0.12em]">
-                EXAMPLE
-              </span>
+        ) : examplePhotos?.length ? (
+          <div className={compact ? "flex h-full min-h-0 flex-col gap-2" : "space-y-2"}>
+            <div className="grid grid-cols-3 gap-2">
+              {examplePhotos.map((photo) => {
+                const active = photo.id === selectedExampleId;
+                return (
+                  <button
+                    key={photo.id}
+                    type="button"
+                    onClick={() => onSelectExample?.(photo.id)}
+                    className={`relative overflow-hidden rounded-lg border ${active ? "border-brand ring-2 ring-brand/30" : "border-border"}`}
+                    aria-pressed={active}
+                    aria-label={active ? `${photo.label}, try-on source` : `Use ${photo.label}`}
+                  >
+                    <img src={photo.url} alt={photo.alt} className="block aspect-[3/4] w-full object-contain object-top" />
+                    {active && (
+                      <span className="absolute top-1 left-1 rounded-md bg-background/90 px-1 py-0.5 font-mono text-[8px] tracking-[0.12em]">
+                        IN USE
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
+            <p className="px-0.5 text-xs leading-relaxed text-muted-foreground">Same try-on for every body.</p>
           </div>
         ) : (
           <div className={`grid place-items-center px-3 text-center ${compact ? "h-full py-4" : "py-10"}`}>

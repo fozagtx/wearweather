@@ -7,7 +7,7 @@ import { LandingPage } from "@/components/landing/landing-page";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { StudioToasts, useStudioToasts } from "@/components/studio-toasts";
-import { exampleBrief, blankBrief, examplePhotoUrl } from "@/lib/example-brief";
+import { exampleBrief, blankBrief, examplePhotos, examplePhotoUrls } from "@/lib/example-brief";
 import { preparePhotoFile } from "@/lib/image-prep";
 import { type HairPlan } from "@/lib/hair-engine";
 import { type MakeupPlan } from "@/lib/makeup-engine";
@@ -39,10 +39,11 @@ export default function Home() {
   const [screen, setScreen] = useState<"start" | "board">("start");
   const [mode, setMode] = useState<"example" | "upload">("example");
   const [context, setContext] = useState<WearContext>(exampleBrief);
-  const [plans, setPlans] = useState<WearPlan[]>(() => rankWearPlans(exampleBrief, 1, [examplePhotoUrl]));
+  const [plans, setPlans] = useState<WearPlan[]>(() => rankWearPlans(exampleBrief, 1, examplePhotoUrls));
   const [selectedPlan, setSelectedPlan] = useState<WearPlan>();
   const [photos, setPhotos] = useState<StudioPhoto[]>([]);
   const [selectedPhotoId, setSelectedPhotoId] = useState<string>();
+  const [selectedExampleId, setSelectedExampleId] = useState(examplePhotos[0].id);
   const [activeRequestId, setActiveRequestId] = useState<string>();
   const [resultUrl, setResultUrl] = useState<string>();
   const [taskError, setTaskError] = useState<string>();
@@ -90,8 +91,9 @@ export default function Home() {
   const selectedPhoto = photos.find((photo) => photo.id === selectedPhotoId);
   const sourceFile = selectedPhoto?.file;
   const sourcePreview = selectedPhoto?.url;
+  const selectedExample = examplePhotos.find((photo) => photo.id === selectedExampleId) || examplePhotos[0];
   const hasSource = mode === "example" || Boolean(sourceFile);
-  const originalUrl = sourcePreview || (mode === "example" ? examplePhotoUrl : "");
+  const originalUrl = sourcePreview || (mode === "example" ? selectedExample.url : "");
   const wornImageUrl = editUrl || hairUrl || makeupUrl || resultUrl;
 
   const notifyJob = (job: StudioJob, tone: "running" | "done") => {
@@ -155,6 +157,7 @@ export default function Home() {
     });
     setPhotos(nextPhotos);
     setSelectedPhotoId(saved.selectedPhotoId || nextPhotos[0]?.id);
+    if (saved.selectedExampleId) setSelectedExampleId(saved.selectedExampleId);
     setResultUrl(urlFromBlob(saved.result));
     setMakeupUrl(urlFromBlob(saved.makeup));
     setHairUrl(urlFromBlob(saved.hair));
@@ -190,6 +193,7 @@ export default function Home() {
         context,
         selectedLookId: selectedPlan?.lookId,
         selectedPhotoId,
+        selectedExampleId,
         photos: photos.map((photo) => ({
           id: photo.id,
           name: photo.file.name,
@@ -274,6 +278,7 @@ export default function Home() {
     selectedPlan?.lookId,
     photos,
     selectedPhotoId,
+    selectedExampleId,
     resultUrl,
     makeupUrl,
     hairUrl,
@@ -290,7 +295,7 @@ export default function Home() {
   ]);
 
   useEffect(() => {
-    const ranked = rankWearPlans(context, recommendationVersion, originalUrl ? [originalUrl] : []);
+    const ranked = rankWearPlans(context, recommendationVersion, [...examplePhotoUrls, ...(originalUrl ? [originalUrl] : [])]);
     setPlans(ranked);
     setSelectedPlan((current) => {
       const wanted = current?.lookId || savedRef.current?.selectedLookId;
@@ -390,7 +395,7 @@ export default function Home() {
     try {
       let file = sourceFile;
       if (!file) {
-        const response = await fetch(examplePhotoUrl);
+        const response = await fetch(originalUrl);
         const blob = await response.blob();
         file = new File([blob], "example-source.jpg", { type: blob.type || "image/jpeg" });
       }
@@ -590,7 +595,7 @@ export default function Home() {
     try {
       let file = sourceFile;
       if (!file) {
-        const response = await fetch(examplePhotoUrl);
+        const response = await fetch(originalUrl);
         const blob = await response.blob();
         file = new File([blob], "example-source.jpg", { type: blob.type || "image/jpeg" });
       }
@@ -831,6 +836,7 @@ export default function Home() {
     setSelectedPlan(undefined);
     setPhotos([]);
     setSelectedPhotoId(undefined);
+    setSelectedExampleId(examplePhotos[0].id);
     setActiveRequestId(undefined);
     setResultUrl(undefined);
     setMakeupPlans([]);
@@ -893,7 +899,27 @@ export default function Home() {
             photos={photos}
             selectedPhotoId={selectedPhotoId}
             uploadError={uploadError}
-            examplePhotoUrl={examplePhotoUrl}
+            examplePhotos={examplePhotos}
+            selectedExampleId={selectedExampleId}
+            onSelectExample={(id) => {
+              if (id === selectedExampleId) return;
+              setSelectedExampleId(id);
+              setActiveRequestId(undefined);
+              setMakeupRequestId(undefined);
+              setHairRequestId(undefined);
+              setMakeupBusy(false);
+              setHairBusy(false);
+              setEditBusy(false);
+              setOrbitBusy(false);
+              setResultUrl(undefined);
+              setMakeupUrl(undefined);
+              setHairUrl(undefined);
+              setEditUrl(undefined);
+              setEditBeforeUrl(undefined);
+              setOrbitFrames(undefined);
+              setViewMode("compare");
+              setTaskError(undefined);
+            }}
             onAddPhotos={handleAddFiles}
             onSelectPhoto={setSelectedPhotoId}
             onRemovePhoto={removePhoto}

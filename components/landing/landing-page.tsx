@@ -46,7 +46,7 @@ const features = [
   {
     eyebrow: "Try-on",
     title: "See the look on your photo, then read the limit.",
-    body: "When you start try-on, the app sends your photo and the catalogue still to YouCam cloth-v4. Until that finishes, you are looking at the source photo and the catalogue reference, not a generated result.",
+    body: "When you start try-on, the app sends your photo and the catalogue still to YouCam cloth-v4. Clothes, makeup, and hair use that same path for every body. Until it finishes, you are looking at the source photo and the catalogue reference, not a generated result.",
     media: <TryOnDetail />,
     src: "/optimized/feature2.webp",
     alt: "Forest behind the source and catalogue comparison",
@@ -100,7 +100,7 @@ const faqs = [
   },
   {
     q: "Can I use my own photo?",
-    a: "Yes. JPG or PNG, under 10 MB, one person facing forward with the whole face and shoulders visible. The file stays as a local object URL until you start try-on. WearWeather does not assess body, health, or worth.",
+    a: "Yes. JPG or PNG, under 10 MB, one person facing forward with the whole face and shoulders visible. Example photos include a Black woman, a mid-size woman, and a plus-size woman. Clothes, makeup, and hair try-on use the same YouCam path for every photo. WearWeather does not assess body, health, or worth.",
   },
 ];
 

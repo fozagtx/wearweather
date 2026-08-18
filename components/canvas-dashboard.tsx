@@ -9,6 +9,7 @@ import { PromptInput, PromptInputActions, PromptInputTextarea } from "@/componen
 import { SystemMessage } from "@/components/prompt-kit/system-message";
 import { Button } from "@/components/ui/button";
 import { GhostButton, PrimaryButton, RetailerLink } from "@/components/ui";
+import type { ExamplePhoto } from "@/lib/example-brief";
 import type { HairPlan } from "@/lib/hair-engine";
 import type { MakeupPlan } from "@/lib/makeup-engine";
 import {
@@ -33,7 +34,9 @@ export type DashboardProps = {
   photos: StudioPhoto[];
   selectedPhotoId?: string;
   uploadError?: string;
-  examplePhotoUrl: string;
+  examplePhotos?: ExamplePhoto[];
+  selectedExampleId?: string;
+  onSelectExample?: (id: string) => void;
   onAddPhotos: (files: FileList | null) => void;
   onSelectPhoto: (id: string) => void;
   onRemovePhoto: (id: string) => void;
@@ -503,7 +506,9 @@ export function CanvasDashboard(dash: DashboardProps) {
                   photos={dash.photos}
                   selectedId={dash.selectedPhotoId}
                   error={dash.uploadError}
-                  examplePhotoUrl={dash.mode === "example" ? dash.examplePhotoUrl : undefined}
+                  examplePhotos={dash.mode === "example" ? dash.examplePhotos : undefined}
+                  selectedExampleId={dash.selectedExampleId}
+                  onSelectExample={dash.onSelectExample}
                   onAdd={dash.onAddPhotos}
                   onSelect={dash.onSelectPhoto}
                   onRemove={dash.onRemovePhoto}

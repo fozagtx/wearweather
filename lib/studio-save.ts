@@ -21,6 +21,7 @@ export type SavedStudio = {
   context: WearContext;
   selectedLookId?: string;
   selectedPhotoId?: string;
+  selectedExampleId?: string;
   photos: SavedPhoto[];
   result?: Blob;
   makeup?: Blob;
